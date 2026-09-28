@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>OddEven Dice — Sugal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ═══════════════════════════════════════════════════════════════
+       0.  CSS VARIABLES  — edit here to retheme the whole app
+       ═══════════════════════════════════════════════════════════════ */
+    :root {
+      --bg-deep:        #070b12;
+      --bg-card:        #0d1520;
+      --bg-overlay:     rgba(7, 11, 18, 0.93);
+
+      /* accents */
+      --accent-gold:    #f0c040;
+      --accent-blue:    #2dd4ff;
+      --accent-green:   #39ff6a;
+      --accent-red:     #ff3860;
+
+      /* text */
+      --text-primary:   #e8eaf6;
+      --text-secondary: #6b748f;
+
+      /* dice */
+      --face-front:     #ccd8e8;   /* front face colour  — light pearl/silver */
+      --face-side:      #b8c8dc;   /* side face colour   */
+      --face-top:       #dce6f0;   /* top face colour    — lightest */
+      --face-bottom:    #a8b8cc;   /* bottom face colour — darkest  */
+      --face-border:    rgba(180,200,224,0.6);
+      --pip-color:      #1e3a5f;   /* pip colour — dark navy, matches GIF */
+
+      /* radii */
+      --r-sm:  8px;
+      --r-md: 14px;
+      --r-lg: 22px;
+
+      /*
+       * DICE SIZE — three breakpoints.
+       * translateZ MUST equal exactly half the face pixel size.
+       * Faces use border-radius: FACE_RADIUS for soft corners.
+       * To compensate for rounded corners shrinking visual edges,
+       * we make each face 4 px LARGER than the stage and shift it
+       * −2 px so it perfectly overlaps its neighbours.
+       *
+       *  Stage  Face   translateZ
+       *  140    144    72
+       *  160    164    82      (≥ 400 px)
+       *  180    184    92      (≥ 600 px)
+       */
+      --dice-stage: 150px;
+      --dice-face:  154px;
+      --dice-tz:     77px;
+      --face-radius: 32px;   /* very large — pillow / cushion cube like the GIF */
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       1.  RESET & BASE
+       ═══════════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: 'Exo 2', 'Segoe UI', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      touch-action: manipulation;
+    }
+    body { overflow-y: auto; }
+
+    /* subtle background glow */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 55% at 50% 0%,  rgba(45,212,255,0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 55% 40% at 85% 100%, rgba(240,192,64,0.06) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       2.  LAYOUT WRAPPER
+       ═══════════════════════════════════════════════════════════════ */
+    #app {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      /* generous padding — extra bottom so bottom-bar never covers content */
+      padding: 20px 18px 140px;
+      gap: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       3.  TOP BAR — logo only (round badge removed)
+       ═══════════════════════════════════════════════════════════════ */
+    #top-bar {
+      width: 100%; max-width: 480px;
+      display: flex;
+      align-items: center;
+      justify-content: center;   /* centred since badge is gone */
+      padding: 12px 0 10px;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      color: var(--accent-gold);
+      text-shadow: 0 0 22px rgba(240,192,64,0.55);
+    }
+    .logo span { color: var(--accent-blue); }
+
+    /* ═══════════════════════════════════════════════════════════════
+       4.  DIVIDER
+       ═══════════════════════════════════════════════════════════════ */
+    .divider {
+      width: 100%; max-width: 480px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(240,192,64,0.28), transparent);
+      margin: 4px 0 18px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       5.  TIMER
+       ═══════════════════════════════════════════════════════════════ */
+    #timer-section {
+      width: 100%; max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    #timer-label {
+      font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+
+    #timer-display {
+      font-size: 4.8rem; font-weight: 900; line-height: 1;
+      color: var(--accent-gold);
+      text-shadow: 0 0 32px rgba(240,192,64,0.7), 0 0 64px rgba(240,192,64,0.25);
+      transition: transform 0.15s ease, color 0.3s ease;
+    }
+    #timer-display.pulse {
+      transform: scale(1.14);
+      color: var(--accent-red);
+      text-shadow: 0 0 32px rgba(255,56,96,0.9);
+    }
+
+    #timer-bar-track {
+      width: 100%; max-width: 300px;
+      height: 5px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 5px; overflow: hidden;
+    }
+    #timer-bar {
+      height: 100%; width: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-gold));
+      border-radius: 5px;
+      transform-origin: left center;
+      transition: transform 1s linear;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       6.  STATUS MESSAGE
+       ═══════════════════════════════════════════════════════════════ */
+    #status-msg {
+      font-size: 0.78rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-secondary);
+      min-height: 1.4em; text-align: center;
+      margin-bottom: 16px;
+      transition: color 0.3s;
+    }
+    #status-msg.rolling { color: var(--accent-blue); }
+    #status-msg.win     { color: var(--accent-green); }
+    #status-msg.lose    { color: var(--accent-red); }
+
+    /* ═══════════════════════════════════════════════════════════════
+       7.  3-D DICE
+       ═══════════════════════════════════════════════════════════════
+       SOFT CORNERS TECHNIQUE:
+         Each face is 4px wider/taller than the stage and shifted
+         −2px so the rounded corner on one face lines up exactly with
+         its neighbour, hiding the gap. The solid #dice-cube::before
+         plug fills the interior so nothing bleeds through.
+    */
+
+    #dice-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: var(--dice-stage);
+      margin: 0 auto 6px;
+      flex-shrink: 0;
+    }
+
+    #dice-stage {
+      perspective: 600px;
+      perspective-origin: 50% 38%;
+      width: var(--dice-stage);
+      height: var(--dice-stage);
+      /* soft white halo glow around the die — matches GIF */
+      filter: drop-shadow(0 0 28px rgba(180,210,240,0.55))
+              drop-shadow(0 4px 16px rgba(100,140,200,0.35));
+    }
+
+    #dice-cube {
+      width: var(--dice-stage);
+      height: var(--dice-stage);
+      position: relative;
+      transform-style: preserve-3d;
+      transform: rotateX(-22deg) rotateY(25deg);
+      transition: transform 0.4s ease;
+    }
+
+    /* solid interior — no bleed-through */
+    #dice-cube::before {
+      content: '';
+      position: absolute;
+      top: 10px; left: 10px;
+      right: 10px; bottom: 10px;
+      background: #b0c4d8;
+      z-index: 0;
+    }
+
+    /* roll animation */
+    @keyframes diceRoll {
+      0%   { transform: rotateX(-22deg)  rotateY(25deg); }
+      18%  { transform: rotateX(210deg)  rotateY(170deg)  rotateZ(75deg); }
+      36%  { transform: rotateX(430deg)  rotateY(390deg)  rotateZ(-55deg); }
+      55%  { transform: rotateX(650deg)  rotateY(230deg)  rotateZ(100deg); }
+      74%  { transform: rotateX(830deg)  rotateY(570deg)  rotateZ(-25deg); }
+      100% { transform: var(--final-rotation, rotateX(-22deg) rotateY(25deg)); }
+    }
+    #dice-cube.rolling {
+      animation: diceRoll 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+    }
+
+    /* ── faces ── */
+    .face {
+      position: absolute;
+      width: var(--dice-face);
+      height: var(--dice-face);
+      top:  -2px;
+      left: -2px;
+      border-radius: var(--face-radius);   /* PILLOW CORNERS */
+      /* No outline — use border for a clean edge */
+      border: 1.5px solid rgba(160,185,210,0.7);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      padding: 18px;
+      gap: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      /*
+       * Soft texture: strong top highlight + bottom shadow = "inflated" pillow look
+       * Matches the GIF's glossy pearl surface
+       */
+      box-shadow:
+        inset 0  6px 14px rgba(255,255,255,0.75),
+        inset 0 -6px 14px rgba(80,110,150,0.30),
+        inset 6px  0 12px rgba(255,255,255,0.35),
+        inset -6px 0 12px rgba(80,110,150,0.20);
+    }
+
+    /* per-face colour — all light silver-blue tones, like the GIF */
+    .face-1 { background: linear-gradient(145deg, #dce8f4 0%, #b8cce0 100%); } /* front */
+    .face-2 { background: linear-gradient(145deg, #b0c2d6 0%, #96aec4 100%); } /* back  */
+    .face-3 { background: linear-gradient(145deg, #bccedd 0%, #a2b8cc 100%); } /* right */
+    .face-4 { background: linear-gradient(145deg, #c4d4e4 0%, #aabcce 100%); } /* left  */
+    .face-5 { background: linear-gradient(145deg, #e4eef8 0%, #c8daea 100%); } /* top   */
+    .face-6 { background: linear-gradient(145deg, #a8bccc 0%, #8ea6bc 100%); } /* bottom*/
+
+    /* face placement — translateZ = dice-face / 2 = 77px */
+    .face-1 { transform: translateZ(77px); }
+    .face-2 { transform: rotateY(180deg) translateZ(77px); }
+    .face-3 { transform: rotateY( 90deg) translateZ(77px); }
+    .face-4 { transform: rotateY(-90deg) translateZ(77px); }
+    .face-5 { transform: rotateX( 90deg) translateZ(77px); }
+    .face-6 { transform: rotateX(-90deg) translateZ(77px); }
+
+    /* ── pips ──
+       The GIF shows dark navy curved dash-like marks, not round dots.
+       We approximate this with a wide rounded rectangle (pill shape).   */
+    .pip {
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+    }
+    .pip.v { opacity: 1; }
+    .pip.v::before {
+      content: '';
+      display: block;
+      /* Wide pill = the curved dash look from the GIF */
+      width: 18px;
+      height: 10px;
+      border-radius: 6px;
+      background: var(--pip-color);     /* dark navy #1e3a5f */
+      /* Slight top shine keeps the raised feel */
+      box-shadow:
+        0 2px 4px rgba(0,0,0,0.35),
+        inset 0 1px 1px rgba(255,255,255,0.18);
+      /* Slight rotation for the casual tilt the GIF shows */
+      transform: rotate(-8deg);
+    }
+
+    /* ── rolled-number display ────────────────────────────────────
+       Lives BELOW the dice (not overlaid on it) so the number is
+       always large and clear — matching the GIF reference.
+       Implemented as a card that slides in after the roll settles.  */
+    #rolled-overlay {
+      /* positioned below the dice-wrap via normal flow (not absolute) */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 10px 28px 12px;
+      border-radius: var(--r-md);
+      /* hidden until a result arrives */
+      opacity: 0;
+      transform: translateY(8px) scale(0.92);
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34,1.2,0.64,1);
+      pointer-events: none;
+      margin-top: 10px;
+      /* subtle card background */
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      min-width: 120px;
+    }
+    #rolled-overlay.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    #rolled-number {
+      font-size: 4.5rem;
+      font-weight: 900;
+      line-height: 1;
+      color: #fff;
+      text-shadow:
+        0 0 24px rgba(255,255,255,1),
+        0 0 48px rgba(240,192,64,0.8),
+        0 0 72px rgba(240,192,64,0.4);
+      letter-spacing: -0.02em;
+    }
+    #rolled-parity {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+    #rolled-parity.odd-label  { color: var(--accent-blue); }
+    #rolled-parity.even-label { color: var(--accent-gold); }
+
+    /* responsive dice sizes */
+    @media (min-width: 400px) {
+      :root {
+        --dice-stage: 170px;
+        --dice-face:  174px;
+        --dice-tz:     87px;
+        --face-radius: 36px;
+      }
+      .face-1 { transform: translateZ(87px); }
+      .face-2 { transform: rotateY(180deg) translateZ(87px); }
+      .face-3 { transform: rotateY( 90deg) translateZ(87px); }
+      .face-4 { transform: rotateY(-90deg) translateZ(87px); }
+      .face-5 { transform: rotateX( 90deg) translateZ(87px); }
+      .face-6 { transform: rotateX(-90deg) translateZ(87px); }
+      .pip.v::before { width: 20px; height: 11px; }
+    }
+    @media (min-width: 600px) {
+      :root {
+        --dice-stage: 190px;
+        --dice-face:  194px;
+        --dice-tz:     97px;
+        --face-radius: 40px;
+      }
+      .face-1 { transform: translateZ(97px); }
+      .face-2 { transform: rotateY(180deg) translateZ(97px); }
+      .face-3 { transform: rotateY( 90deg) translateZ(97px); }
+      .face-4 { transform: rotateY(-90deg) translateZ(97px); }
+      .face-5 { transform: rotateX( 90deg) translateZ(97px); }
+      .face-6 { transform: rotateX(-90deg) translateZ(97px); }
+      .pip.v::before { width: 22px; height: 12px; }
+      #timer-display { font-size: 5.5rem; }
+      #rolled-number { font-size: 5rem; }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       8.  HISTORY STRIP
+       ═══════════════════════════════════════════════════════════════ */
+    #results-strip {
+      display: flex; gap: 6px; align-items: center;
+      margin-bottom: 22px;
+      flex-wrap: wrap; justify-content: center;
+    }
+    #results-label {
+      font-size: 0.6rem; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--text-secondary); margin-right: 4px;
+    }
+    .result-bubble {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 800;
+      border: 2px solid transparent; flex-shrink: 0;
+      animation: bubblePop 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+    @keyframes bubblePop {
+      from { transform: scale(0); opacity: 0; }
+      to   { transform: scale(1); opacity: 1; }
+    }
+    .result-bubble.odd  { background: rgba(45,212,255,0.12); border-color: var(--accent-blue); color: var(--accent-blue); }
+    .result-bubble.even { background: rgba(240,192,64,0.12);  border-color: var(--accent-gold); color: var(--accent-gold); }
+
+    /* ═══════════════════════════════════════════════════════════════
+       9.  BET CHIP  (opens bet-amount modal)
+       ═══════════════════════════════════════════════════════════════ */
+    #bet-row {
+      width: 100%; max-width: 480px;
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 14px;
+    }
+    #bet-label {
+      font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-secondary); white-space: nowrap;
+    }
+    #bet-chip {
+      flex: 1;
+      background: var(--bg-card);
+      border: 2px solid rgba(240,192,64,0.3);
+      border-radius: var(--r-sm);
+      padding: 11px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer;
+      min-height: 50px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    #bet-chip:hover, #bet-chip:active {
+      border-color: var(--accent-gold);
+      box-shadow: 0 0 16px rgba(240,192,64,0.25);
+    }
+    #bet-chip-value {
+      font-size: 1.15rem; font-weight: 800; color: var(--accent-gold);
+    }
+    #bet-chip-arrow {
+      font-size: 0.85rem; color: var(--text-secondary);
+      transition: transform 0.2s;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       10. ODD / EVEN BUTTONS
+       ═══════════════════════════════════════════════════════════════ */
+    #bet-buttons {
+      width: 100%; max-width: 480px;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 14px; margin-bottom: 28px;
+    }
+    .bet-btn {
+      min-height: 68px;
+      border: none; border-radius: var(--r-md);
+      cursor: pointer; font-family: inherit;
+      font-size: 1.25rem; font-weight: 900;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      position: relative; overflow: hidden;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bet-btn::after {
+      content: ''; position: absolute; inset: 0;
+      background: white; opacity: 0; transition: opacity 0.4s;
+    }
+    .bet-btn:active::after { opacity: 0.1; }
+    .bet-btn:active { transform: scale(0.96); }
+
+    #btn-odd {
+      background: linear-gradient(135deg, #0f2744, #0b1e36);
+      border: 2px solid var(--accent-blue);
+      color: var(--accent-blue);
+      box-shadow: 0 0 20px rgba(45,212,255,0.12);
+    }
+    #btn-odd:hover  { box-shadow: 0 0 30px rgba(45,212,255,0.3); }
+    #btn-odd.selected {
+      background: linear-gradient(135deg, #0d3d6e, #072e55);
+      box-shadow: 0 0 40px rgba(45,212,255,0.6), 0 4px 16px rgba(45,212,255,0.35);
+      color: #fff;
+    }
+
+    #btn-even {
+      background: linear-gradient(135deg, #2a1f08, #1e1604);
+      border: 2px solid var(--accent-gold);
+      color: var(--accent-gold);
+      box-shadow: 0 0 20px rgba(240,192,64,0.12);
+    }
+    #btn-even:hover  { box-shadow: 0 0 30px rgba(240,192,64,0.3); }
+    #btn-even.selected {
+      background: linear-gradient(135deg, #4a3300, #332400);
+      box-shadow: 0 0 40px rgba(240,192,64,0.6), 0 4px 16px rgba(240,192,64,0.35);
+      color: #fff;
+    }
+
+    .bet-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-sub { display: block; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.08em; margin-top: 4px; opacity: 0.7; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       11. BOTTOM BAR  (balance + top-up)
+       ═══════════════════════════════════════════════════════════════ */
+    #bottom-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(7,11,18,0.97);
+      border-top: 1px solid rgba(240,192,64,0.14);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      padding: 12px 20px 14px;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    }
+    #balance-block { display: flex; flex-direction: column; gap: 2px; }
+    #balance-label {
+      font-size: 0.58rem; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    #balance-value {
+      font-size: 1.45rem; font-weight: 900;
+      color: var(--accent-gold);
+      text-shadow: 0 0 14px rgba(240,192,64,0.4);
+      transition: color 0.3s;
+    }
+    #balance-value.win  { color: var(--accent-green); }
+    #balance-value.lose { color: var(--accent-red); }
+
+    #btn-topup {
+      background: linear-gradient(135deg, #1a3a1a, #102810);
+      border: 2px solid var(--accent-green);
+      color: var(--accent-green);
+      font-family: inherit; font-size: 0.82rem; font-weight: 800;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 11px 20px; border-radius: var(--r-sm);
+      cursor: pointer; min-height: 46px; white-space: nowrap;
+      transition: box-shadow 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #btn-topup:hover  { box-shadow: 0 0 22px rgba(57,255,106,0.4); }
+    #btn-topup:active { transform: scale(0.95); }
+
+    /* ═══════════════════════════════════════════════════════════════
+       12. MODALS  (shared base styles)
+       ═══════════════════════════════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: var(--bg-overlay);
+      backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    /* bottom-sheet style */
+    .modal-sheet {
+      width: 100%; max-width: 480px;
+      background: var(--bg-card);
+      border-radius: var(--r-lg) var(--r-lg) 0 0;
+      border: 1px solid rgba(255,255,255,0.07); border-bottom: none;
+      padding: 24px 20px 42px;
+      transform: translateY(100%);
+      transition: transform 0.32s cubic-bezier(0.34,1.1,0.64,1);
+    }
+    .modal-overlay.open .modal-sheet { transform: translateY(0); }
+
+    /* centred modal (admin) */
+    .modal-sheet.centered {
+      align-self: center;
+      border-radius: var(--r-lg);
+      border: 1px solid rgba(240,192,64,0.22);
+      max-height: 90vh; overflow-y: auto;
+      transform: scale(0.91) translateY(18px);
+    }
+    .modal-overlay.open .modal-sheet.centered { transform: scale(1) translateY(0); }
+
+    .modal-title {
+      font-size: 0.7rem; font-weight: 800;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--text-secondary); text-align: center;
+      margin-bottom: 22px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       13. BET AMOUNT MODAL
+       ═══════════════════════════════════════════════════════════════ */
+    #bet-options {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-bottom: 16px;
+    }
+    .bet-option-btn {
+      background: var(--bg-deep);
+      border: 2px solid rgba(240,192,64,0.22);
+      border-radius: var(--r-sm);
+      color: var(--text-primary);
+      font-family: inherit; font-size: 1rem; font-weight: 700;
+      padding: 14px 6px; cursor: pointer;
+      min-height: 54px;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .bet-option-btn:hover, .bet-option-btn.active {
+      border-color: var(--accent-gold);
+      background: rgba(240,192,64,0.08);
+      box-shadow: 0 0 14px rgba(240,192,64,0.2);
+      color: var(--accent-gold);
+    }
+    #bet-confirm-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent-gold), #c89008);
+      color: #0f0900; border: none; border-radius: var(--r-sm);
+      font-family: inherit; font-size: 1rem; font-weight: 900;
+      padding: 15px; cursor: pointer;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      min-height: 54px;
+      transition: opacity 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #bet-confirm-btn:active { transform: scale(0.97); }
+
+    /* ═══════════════════════════════════════════════════════════════
+       14. TOP-UP MODAL  (new — pick how much to add)
+       ═══════════════════════════════════════════════════════════════ */
+    #topup-options {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px; margin-bottom: 16px;
+    }
+    .topup-option-btn {
+      background: var(--bg-deep);
+      border: 2px solid rgba(57,255,106,0.22);
+      border-radius: var(--r-sm);
+      color: var(--text-primary);
+      font-family: inherit; font-size: 0.95rem; font-weight: 700;
+      padding: 14px 6px; cursor: pointer;
+      min-height: 54px;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .topup-option-btn:hover, .topup-option-btn.active {
+      border-color: var(--accent-green);
+      background: rgba(57,255,106,0.08);
+      box-shadow: 0 0 14px rgba(57,255,106,0.2);
+      color: var(--accent-green);
+    }
+    #topup-confirm-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #1a4a1a, #0e2e0e);
+      border: 2px solid var(--accent-green);
+      color: var(--accent-green);
+      font-family: inherit; font-size: 1rem; font-weight: 900;
+      padding: 15px; cursor: pointer;
+      border-radius: var(--r-sm);
+      letter-spacing: 0.06em; text-transform: uppercase;
+      min-height: 54px;
+      transition: box-shadow 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #topup-confirm-btn:hover  { box-shadow: 0 0 22px rgba(57,255,106,0.35); }
+    #topup-confirm-btn:active { transform: scale(0.97); }
+
+    /* ═══════════════════════════════════════════════════════════════
+       15. FLOATING WIN/LOSE TEXT
+       ═══════════════════════════════════════════════════════════════ */
+    .float-text {
+      position: fixed; left: 50%; bottom: 100px;
+      transform: translateX(-50%);
+      font-size: 2rem; font-weight: 900;
+      pointer-events: none; z-index: 300;
+      animation: floatUp 1.7s ease-out forwards;
+      text-shadow: 0 0 20px currentColor;
+    }
+    .float-text.win  { color: var(--accent-green); }
+    .float-text.lose { color: var(--accent-red); }
+    @keyframes floatUp {
+      0%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+      70%  { opacity: 1; transform: translateX(-50%) translateY(-90px); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-130px); }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       16. TOAST
+       ═══════════════════════════════════════════════════════════════ */
+    #toast {
+      position: fixed; top: 20px; left: 50%;
+      transform: translateX(-50%) translateY(-90px);
+      z-index: 400;
+      background: #1a0810;
+      border: 1.5px solid var(--accent-red);
+      color: var(--accent-red);
+      padding: 13px 22px; border-radius: var(--r-sm);
+      font-size: 0.87rem; font-weight: 700;
+      letter-spacing: 0.04em; text-align: center;
+      max-width: 320px; width: calc(100% - 36px);
+      box-shadow: 0 0 30px rgba(255,56,96,0.3);
+      transition: transform 0.35s cubic-bezier(0.34,1.1,0.64,1);
+      pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.green {
+      background: #081a10;
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      box-shadow: 0 0 30px rgba(57,255,106,0.3);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       17. ADMIN PANEL
+       ═══════════════════════════════════════════════════════════════ */
+    /* invisible tap zone — top-right corner */
+    #admin-trigger {
+      position: fixed; top: 0; right: 0;
+      width: 64px; height: 64px;
+      background: transparent; border: none;
+      cursor: pointer; z-index: 500;
+    }
+
+    .admin-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px; padding-bottom: 14px;
+      border-bottom: 1px solid rgba(240,192,64,0.14);
+    }
+    .admin-title {
+      font-size: 1rem; font-weight: 900;
+      letter-spacing: 0.1em; color: var(--accent-gold);
+      text-shadow: 0 0 14px rgba(240,192,64,0.5);
+    }
+    #admin-close-btn {
+      background: rgba(255,56,96,0.1);
+      border: 1.5px solid var(--accent-red);
+      color: var(--accent-red);
+      font-family: inherit; font-size: 0.75rem; font-weight: 800;
+      padding: 7px 15px; border-radius: 6px;
+      cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .admin-section-title {
+      font-size: 0.62rem; font-weight: 800;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--text-secondary); margin: 20px 0 12px;
+    }
+    .queue-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 9px;
+    }
+    .queue-roll-label {
+      font-size: 0.75rem; font-weight: 700;
+      color: var(--text-secondary); width: 46px; flex-shrink: 0;
+    }
+    .queue-toggle {
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr 1fr;
+      border-radius: 6px; overflow: hidden;
+      border: 1.5px solid rgba(255,255,255,0.09);
+    }
+    .queue-toggle input[type="radio"] { display: none; }
+    .queue-toggle label {
+      padding: 9px 4px; text-align: center;
+      font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      cursor: pointer; color: var(--text-secondary);
+      background: var(--bg-deep);
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+    }
+    .queue-toggle input[value="odd"]:checked    + label { background: rgba(45,212,255,0.2);  color: var(--accent-blue); }
+    .queue-toggle input[value="even"]:checked   + label { background: rgba(240,192,64,0.2);  color: var(--accent-gold); }
+    .queue-toggle input[value="random"]:checked + label { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+
+    .admin-control-row {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 8px;
+    }
+    .admin-control-row label {
+      font-size: 0.75rem; font-weight: 700;
+      color: var(--text-secondary); flex: 1;
+    }
+    #admin-timer-input {
+      width: 72px;
+      background: var(--bg-deep);
+      border: 1.5px solid rgba(240,192,64,0.3);
+      border-radius: 6px;
+      color: var(--accent-gold);
+      font-family: inherit; font-size: 1rem; font-weight: 800;
+      padding: 9px 10px; text-align: center; outline: none;
+    }
+    #admin-timer-input:focus { border-color: var(--accent-gold); box-shadow: 0 0 10px rgba(240,192,64,0.22); }
+    #admin-apply-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #1a2c1a, #102010);
+      border: 1.5px solid var(--accent-green);
+      color: var(--accent-green);
+      font-family: inherit; font-size: 0.87rem; font-weight: 800;
+      padding: 13px; border-radius: var(--r-sm);
+      cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase;
+      margin-top: 18px;
+      transition: box-shadow 0.2s, transform 0.1s;
+    }
+    #admin-apply-btn:hover  { box-shadow: 0 0 20px rgba(57,255,106,0.3); }
+    #admin-apply-btn:active { transform: scale(0.97); }
+    .admin-hint {
+      font-size: 0.62rem; color: var(--text-secondary);
+      text-align: center; margin-top: 14px; line-height: 1.6;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       18. MISC
+       ═══════════════════════════════════════════════════════════════ */
+    .hidden { display: none !important; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg-deep); }
+    ::-webkit-scrollbar-thumb { background: rgba(240,192,64,0.28); border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ Invisible admin trigger (top-right corner) ═══ -->
+  <button id="admin-trigger" aria-label="" title=""></button>
+
+  <!-- ═══ Main App ═══ -->
+  <main id="app">
+
+    <!-- Logo bar (round badge removed) -->
+    <div id="top-bar">
+      <div class="logo">Odd<span>Even</span> Dice</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Countdown timer -->
+    <section id="timer-section" aria-label="Countdown timer">
+      <div id="timer-label">Susunod na Hilis</div>
+      <div id="timer-display" role="timer" aria-live="polite">8</div>
+      <div id="timer-bar-track"><div id="timer-bar"></div></div>
+    </section>
+
+    <!-- Status line -->
+    <div id="status-msg">Pumili ng taya mo</div>
+
+    <!-- 3-D Dice + rolled-number overlay -->
+    <div id="dice-wrap">
+      <div id="dice-stage" aria-label="3D dice">
+        <div id="dice-cube">
+
+          <!-- Face 1 — front: single centre pip -->
+          <div class="face face-1" data-face="1">
+            <div class="pip"></div><div class="pip"></div><div class="pip"></div>
+            <div class="pip"></div><div class="pip v"></div><div class="pip"></div>
+            <div class="pip"></div><div class="pip"></div><div class="pip"></div>
+          </div>
+
+          <!-- Face 2 — back: top-right + bottom-left -->
+          <div class="face face-2" data-face="2">
+            <div class="pip"></div><div class="pip"></div><div class="pip v"></div>
+            <div class="pip"></div><div class="pip"></div><div class="pip"></div>
+            <div class="pip v"></div><div class="pip"></div><div class="pip"></div>
+          </div>
+
+          <!-- Face 3 — right: diagonal 3 -->
+          <div class="face face-3" data-face="3">
+            <div class="pip"></div><div class="pip"></div><div class="pip v"></div>
+            <div class="pip"></div><div class="pip v"></div><div class="pip"></div>
+            <div class="pip v"></div><div class="pip"></div><div class="pip"></div>
+          </div>
+
+          <!-- Face 4 — left: four corners -->
+          <div class="face face-4" data-face="4">
+            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
+            <div class="pip"></div><div class="pip"></div><div class="pip"></div>
+            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
+          </div>
+
+          <!-- Face 5 — top: four corners + centre -->
+          <div class="face face-5" data-face="5">
+            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
+            <div class="pip"></div><div class="pip v"></div><div class="pip"></div>
+            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
+          </div>
+
+          <!-- Face 6 — bottom: two columns of 3 -->
+          <div class="face face-6" data-face="6">
+            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
+            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
+            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
+          </div>
+
+        </div><!-- #dice-cube -->
+      </div><!-- #dice-stage -->
+
+    </div><!-- #dice-wrap -->
+
+    <!-- Rolled number — shown BELOW the dice after each roll, large & clear -->
+    <div id="rolled-overlay" aria-live="polite">
+      <div id="rolled-number">—</div>
+      <div id="rolled-parity"></div>
+    </div>
+
+    <!-- History strip -->
+    <div id="results-strip">
+      <span id="results-label">Kasaysayan</span>
+    </div>
+
+    <!-- Bet chip (opens bet-amount picker) -->
+    <div id="bet-row">
+      <span id="bet-label">Taya</span>
+      <div id="bet-chip" role="button" tabindex="0" aria-label="Piliin ang halaga ng taya">
+        <span id="bet-chip-value">₱50</span>
+        <span id="bet-chip-arrow">▲</span>
+      </div>
+    </div>
+
+    <!-- ODD / EVEN buttons -->
+    <div id="bet-buttons" role="group" aria-label="Piliin ang Odd o Even">
+      <button class="bet-btn" id="btn-odd"  aria-pressed="false">
+        ODD
+        <span class="btn-sub">1 · 3 · 5</span>
+      </button>
+      <button class="bet-btn" id="btn-even" aria-pressed="false">
+        EVEN
+        <span class="btn-sub">2 · 4 · 6</span>
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ═══ Fixed Bottom Bar ═══ -->
+  <div id="bottom-bar" role="region" aria-label="Balanse">
+    <div id="balance-block">
+      <div id="balance-label">Balanse</div>
+      <div id="balance-value">₱1,000</div>
+    </div>
+    <button id="btn-topup" aria-label="Mag-top up">+ Top Up</button>
+  </div>
+
+  <!-- ═══ Bet Amount Modal ═══ -->
+  <div id="bet-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Pumili ng halaga ng taya">
+    <div class="modal-sheet">
+      <p class="modal-title">Halaga ng Taya</p>
+      <div id="bet-options">
+        <!-- amounts match BET_OPTIONS array in JS -->
+        <button class="bet-option-btn" data-amount="10">₱10</button>
+        <button class="bet-option-btn" data-amount="50">₱50</button>
+        <button class="bet-option-btn" data-amount="100">₱100</button>
+        <button class="bet-option-btn" data-amount="500">₱500</button>
+        <button class="bet-option-btn" data-amount="1000">₱1,000</button>
+        <button class="bet-option-btn" id="btn-max-bet">Max</button>
+      </div>
+      <button id="bet-confirm-btn">Kumpirmahin</button>
+    </div>
+  </div>
+
+  <!-- ═══ Top-Up Modal (new) ═══ -->
+  <div id="topup-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Mag-top up ng balanse">
+    <div class="modal-sheet">
+      <p class="modal-title">Dagdag na Balanse</p>
+      <div id="topup-options">
+        <!-- amounts match TOPUP_OPTIONS array in JS -->
+        <button class="topup-option-btn" data-amount="100">₱100</button>
+        <button class="topup-option-btn" data-amount="500">₱500</button>
+        <button class="topup-option-btn" data-amount="1000">₱1,000</button>
+        <button class="topup-option-btn" data-amount="2000">₱2,000</button>
+        <button class="topup-option-btn" data-amount="5000">₱5,000</button>
+        <button class="topup-option-btn" data-amount="10000">₱10,000</button>
+      </div>
+      <button id="topup-confirm-btn">Idagdag sa Balanse</button>
+    </div>
+  </div>
+
+  <!-- ═══ Admin Modal ═══ -->
+  <div id="admin-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Admin panel">
+    <div class="modal-sheet centered">
+
+      <div class="admin-header">
+        <span class="admin-title">⚙ Admin Panel</span>
+        <button id="admin-close-btn">✕ Isara</button>
+      </div>
+
+      <div class="admin-section-title">🎲 Itakda ang Susunod na 5 Hilis</div>
+
+      <div class="queue-row">
+        <span class="queue-roll-label">Hilis 1</span>
+        <div class="queue-toggle">
+          <input type="radio" name="q1" id="q1-odd"    value="odd"><label for="q1-odd">Odd</label>
+          <input type="radio" name="q1" id="q1-even"   value="even"><label for="q1-even">Even</label>
+          <input type="radio" name="q1" id="q1-random" value="random" checked><label for="q1-random">Rnd</label>
+        </div>
+      </div>
+      <div class="queue-row">
+        <span class="queue-roll-label">Hilis 2</span>
+        <div class="queue-toggle">
+          <input type="radio" name="q2" id="q2-odd"    value="odd"><label for="q2-odd">Odd</label>
+          <input type="radio" name="q2" id="q2-even"   value="even"><label for="q2-even">Even</label>
+          <input type="radio" name="q2" id="q2-random" value="random" checked><label for="q2-random">Rnd</label>
+        </div>
+      </div>
+      <div class="queue-row">
+        <span class="queue-roll-label">Hilis 3</span>
+        <div class="queue-toggle">
+          <input type="radio" name="q3" id="q3-odd"    value="odd"><label for="q3-odd">Odd</label>
+          <input type="radio" name="q3" id="q3-even"   value="even"><label for="q3-even">Even</label>
+          <input type="radio" name="q3" id="q3-random" value="random" checked><label for="q3-random">Rnd</label>
+        </div>
+      </div>
+      <div class="queue-row">
+        <span class="queue-roll-label">Hilis 4</span>
+        <div class="queue-toggle">
+          <input type="radio" name="q4" id="q4-odd"    value="odd"><label for="q4-odd">Odd</label>
+          <input type="radio" name="q4" id="q4-even"   value="even"><label for="q4-even">Even</label>
+          <input type="radio" name="q4" id="q4-random" value="random" checked><label for="q4-random">Rnd</label>
+        </div>
+      </div>
+      <div class="queue-row">
+        <span class="queue-roll-label">Hilis 5</span>
+        <div class="queue-toggle">
+          <input type="radio" name="q5" id="q5-odd"    value="odd"><label for="q5-odd">Odd</label>
+          <input type="radio" name="q5" id="q5-even"   value="even"><label for="q5-even">Even</label>
+          <input type="radio" name="q5" id="q5-random" value="random" checked><label for="q5-random">Rnd</label>
+        </div>
+      </div>
+
+      <div class="admin-section-title">⏱ Tagal ng Timer (segundo)</div>
+      <div class="admin-control-row">
+        <label for="admin-timer-input">Haba ng countdown</label>
+        <input type="number" id="admin-timer-input" min="3" max="60" value="8" />
+      </div>
+
+      <button id="admin-apply-btn">✓ I-apply ang Settings</button>
+      <p class="admin-hint">
+        Ang mga naka-rig na hilis ay nalalapat sa susunod na N na rounds.<br>
+        "Rnd" = normal na random.
+      </p>
+
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" role="alert" aria-live="assertive"></div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       J A V A S C R I P T
+       ═══════════════════════════════════════════════════════════════ -->
+  <script>
+  'use strict';
+
+  /* ────────────────────────────────────────────────────────────────
+     CONFIGURATION  — edit these to change game parameters
+     ──────────────────────────────────────────────────────────────── */
+
+  // Starting balance in Philippine Peso
+  const STARTING_BALANCE = 1000;
+
+  // Default countdown timer in seconds (admin can change at runtime)
+  let TIMER_DURATION = 8;
+
+  // Bet quick-select amounts (shown in the bet modal) — edit freely
+  const BET_OPTIONS = [10, 50, 100, 500, 1000];
+
+  // Top-up quick-select amounts — edit freely
+  const TOPUP_OPTIONS = [100, 500, 1000, 2000, 5000, 10000];
+
+  // Default starting bet
+  const DEFAULT_BET = 50;
+
+  // How many results to keep in the history strip
+  const HISTORY_LIMIT = 6;
+
+  // Duration (ms) of the CSS roll animation — must match @keyframes diceRoll
+  const ROLL_ANIMATION_MS = 2400;
+
+  /* ────────────────────────────────────────────────────────────────
+     GAME STATE
+     ──────────────────────────────────────────────────────────────── */
+  const state = {
+    balance:   STARTING_BALANCE,
+    bet:       DEFAULT_BET,
+    topupAmt:  1000,              // selected top-up amount
+    choice:    null,              // 'odd' | 'even' | null
+    round:     1,
+    phase:     'betting',         // 'betting' | 'rolling' | 'result'
+    timerSecs: TIMER_DURATION,
+    timerID:   null,
+    history:   [],
+    // Admin rig queue — 5 entries, each 'odd' | 'even' | 'random'
+    rigQueue: ['random','random','random','random','random'],
+  };
+
+  /* ────────────────────────────────────────────────────────────────
+     FACE ROTATION MAP
+     Each face value maps to [rotateX, rotateY] that brings it front.
+     The 720° extra spin is baked in for the tumbling effect.
+     ──────────────────────────────────────────────────────────────── */
+  const FACE_ROTATION = {
+    1: [ -22 + 720,   25 + 720 ],   // front
+    2: [ -22 + 720, -155 + 720 ],   // back
+    3: [ -22 + 720,  -65 + 720 ],   // right
+    4: [ -22 + 720,   65 + 720 ],   // left
+    5: [ -82 + 720,   25 + 720 ],   // top
+    6: [  68 + 720,   25 + 720 ],   // bottom
+  };
+
+  /* ────────────────────────────────────────────────────────────────
+     DOM REFERENCES
+     ──────────────────────────────────────────────────────────────── */
+  const $ = id => document.getElementById(id);
+
+  const dom = {
+    timerDisplay:    $('timer-display'),
+    timerBar:        $('timer-bar'),
+    statusMsg:       $('status-msg'),
+    diceCube:        $('dice-cube'),
+    rolledOverlay:   $('rolled-overlay'),
+    rolledNumber:    $('rolled-number'),
+    rolledParity:    $('rolled-parity'),
+    resultsStrip:    $('results-strip'),
+    balanceValue:    $('balance-value'),
+    betChipValue:    $('bet-chip-value'),
+    betChip:         $('bet-chip'),
+    betChipArrow:    $('bet-chip-arrow'),
+    btnOdd:          $('btn-odd'),
+    btnEven:         $('btn-even'),
+    btnTopup:        $('btn-topup'),
+    toast:           $('toast'),
+    // Bet modal
+    betModal:        $('bet-modal'),
+    betConfirmBtn:   $('bet-confirm-btn'),
+    btnMaxBet:       $('btn-max-bet'),
+    // Top-up modal
+    topupModal:      $('topup-modal'),
+    topupConfirmBtn: $('topup-confirm-btn'),
+    // Admin modal
+    adminTrigger:    $('admin-trigger'),
+    adminModal:      $('admin-modal'),
+    adminCloseBtn:   $('admin-close-btn'),
+    adminApplyBtn:   $('admin-apply-btn'),
+    adminTimerInput: $('admin-timer-input'),
+  };
+
+  /* ────────────────────────────────────────────────────────────────
+     UTILITIES
+     ──────────────────────────────────────────────────────────────── */
+
+  // Format number as Philippine Peso — ₱1,000
+  function formatMoney(n) {
+    return '₱' + Math.abs(n).toLocaleString('en-PH');
+  }
+
+  function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     TOAST
+     ──────────────────────────────────────────────────────────────── */
+  let toastTimer = null;
+
+  function showToast(msg, type = 'error', duration = 2800) {
+    dom.toast.textContent = msg;
+    dom.toast.className = type === 'success' ? 'show green' : 'show';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { dom.toast.className = ''; }, duration);
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     BALANCE
+     ──────────────────────────────────────────────────────────────── */
+  function updateBalanceDisplay(flashClass) {
+    dom.balanceValue.textContent = formatMoney(state.balance);
+    if (flashClass) {
+      dom.balanceValue.classList.add(flashClass);
+      setTimeout(() => dom.balanceValue.classList.remove(flashClass), 950);
+    }
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     FLOATING WIN / LOSE TEXT
+     ──────────────────────────────────────────────────────────────── */
+  function spawnFloatText(amount, isWin) {
+    const el = document.createElement('div');
+    el.classList.add('float-text', isWin ? 'win' : 'lose');
+    el.textContent = (isWin ? '+' : '-') + formatMoney(amount);
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     HISTORY STRIP
+     ──────────────────────────────────────────────────────────────── */
+  function pushHistory(val) {
+    state.history.unshift(val);
+    if (state.history.length > HISTORY_LIMIT) state.history.length = HISTORY_LIMIT;
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const label = $('results-label');
+    dom.resultsStrip.innerHTML = '';
+    dom.resultsStrip.appendChild(label);
+    state.history.forEach(val => {
+      const odd = val % 2 !== 0;
+      const b = document.createElement('div');
+      b.classList.add('result-bubble', odd ? 'odd' : 'even');
+      b.textContent = val;
+      b.title = odd ? 'Odd' : 'Even';
+      dom.resultsStrip.appendChild(b);
+    });
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     BET CHIP
+     ──────────────────────────────────────────────────────────────── */
+  function updateBetChip() {
+    dom.betChipValue.textContent = formatMoney(state.bet);
+  }
+
+  function syncBetOptions() {
+    document.querySelectorAll('.bet-option-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.amount, 10) === state.bet);
+    });
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     TOP-UP CHIP
+     ──────────────────────────────────────────────────────────────── */
+  function syncTopupOptions() {
+    document.querySelectorAll('.topup-option-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.amount, 10) === state.topupAmt);
+    });
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     ROLLED NUMBER OVERLAY
+     ──────────────────────────────────────────────────────────────── */
+  function showRolledOverlay(value) {
+    const isOdd = value % 2 !== 0;
+    dom.rolledNumber.textContent = value;
+    dom.rolledParity.textContent = isOdd ? 'ODD' : 'EVEN';
+    dom.rolledParity.className   = isOdd ? 'odd-label' : 'even-label';
+    dom.rolledOverlay.classList.add('show');
+  }
+
+  function hideRolledOverlay() {
+    dom.rolledOverlay.classList.remove('show');
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     COUNTDOWN TIMER
+     ──────────────────────────────────────────────────────────────── */
+  function startTimer() {
+    clearInterval(state.timerID);
+    state.timerSecs = TIMER_DURATION;
+    renderTimer();
+
+    state.timerID = setInterval(() => {
+      state.timerSecs -= 1;
+
+      // Pulse last 3 seconds
+      if (state.timerSecs <= 3 && state.timerSecs > 0) {
+        dom.timerDisplay.classList.add('pulse');
+        setTimeout(() => dom.timerDisplay.classList.remove('pulse'), 260);
+      }
+
+      if (state.timerSecs <= 0) {
+        clearInterval(state.timerID);
+        triggerRoll();
+      } else {
+        renderTimer();
+      }
+    }, 1000);
+  }
+
+  function renderTimer() {
+    dom.timerDisplay.textContent = state.timerSecs;
+    const pct = state.timerSecs / TIMER_DURATION;
+    dom.timerBar.style.transform = `scaleX(${pct})`;
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     DICE ROLL
+     ──────────────────────────────────────────────────────────────── */
+  function determineOutcome() {
+    const directive = state.rigQueue.shift();
+    state.rigQueue.push('random');  // keep queue length at 5
+
+    if (directive === 'odd')  return [1,3,5][randInt(0,2)];
+    if (directive === 'even') return [2,4,6][randInt(0,2)];
+    return randInt(1, 6);
+  }
+
+  function getFaceTransform(face) {
+    const [rx, ry] = FACE_ROTATION[face];
+    return `rotateX(${rx}deg) rotateY(${ry}deg)`;
+  }
+
+  function triggerRoll() {
+    state.phase = 'rolling';
+    lockBettingUI(true);
+    hideRolledOverlay();
+
+    dom.statusMsg.className = 'rolling';
+    dom.statusMsg.textContent = 'Naghihilis…';
+
+    const result = determineOutcome();
+    const finalTransform = getFaceTransform(result);
+
+    dom.diceCube.style.setProperty('--final-rotation', finalTransform);
+    dom.diceCube.classList.add('rolling');
+
+    setTimeout(() => {
+      dom.diceCube.classList.remove('rolling');
+      dom.diceCube.style.transform = finalTransform;
+      showRolledOverlay(result);   // ← show the number on the dice
+      resolveRound(result);
+    }, ROLL_ANIMATION_MS);
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     ROUND RESOLUTION
+     ──────────────────────────────────────────────────────────────── */
+  function resolveRound(diceValue) {
+    state.phase = 'result';
+    const isOdd  = diceValue % 2 !== 0;
+    const didBet = state.choice !== null;
+
+    pushHistory(diceValue);
+
+    if (didBet) {
+      const win = (state.choice === 'odd') === isOdd;
+
+      if (win) {
+        state.balance += state.bet;
+        spawnFloatText(state.bet, true);
+        updateBalanceDisplay('win');
+        dom.statusMsg.className = 'win';
+        dom.statusMsg.textContent = `🎉 Lumabas ${diceValue} — Nanalo ka ng ${formatMoney(state.bet)}!`;
+      } else {
+        state.balance = Math.max(0, state.balance - state.bet);
+        spawnFloatText(state.bet, false);
+        updateBalanceDisplay('lose');
+        dom.statusMsg.className = 'lose';
+        dom.statusMsg.textContent = `💀 Lumabas ${diceValue} — Natalo ka ng ${formatMoney(state.bet)}`;
+      }
+    } else {
+      dom.statusMsg.className = '';
+      dom.statusMsg.textContent = `Lumabas ${diceValue} (${isOdd ? 'Odd' : 'Even'}) — Walang taya`;
+      updateBalanceDisplay();
+    }
+
+    clearBetChoice();
+    state.round += 1;
+    syncAdminQueueUI();
+
+    // Wait 2.4 s so player can read the result, then start next round
+    setTimeout(() => {
+      state.phase = 'betting';
+      lockBettingUI(false);
+      hideRolledOverlay();
+      dom.statusMsg.className = '';
+      dom.statusMsg.textContent = 'Pumili ng taya mo';
+      startTimer();
+    }, 2400);
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     BETTING UI HELPERS
+     ──────────────────────────────────────────────────────────────── */
+  function lockBettingUI(locked) {
+    dom.btnOdd.disabled  = locked;
+    dom.btnEven.disabled = locked;
+    dom.betChip.style.pointerEvents = locked ? 'none' : 'auto';
+    dom.betChip.style.opacity = locked ? '0.45' : '1';
+  }
+
+  function clearBetChoice() {
+    state.choice = null;
+    dom.btnOdd.classList.remove('selected');
+    dom.btnEven.classList.remove('selected');
+    dom.btnOdd.setAttribute('aria-pressed', 'false');
+    dom.btnEven.setAttribute('aria-pressed', 'false');
+  }
+
+  function placeBet(choice) {
+    if (state.phase !== 'betting') return;
+
+    if (state.balance <= 0 || state.balance < state.bet) {
+      showToast('Hindi sapat ang balanse. Mag-top up muna.', 'error');
+      return;
+    }
+
+    state.choice = choice;
+    dom.btnOdd.classList.toggle('selected',  choice === 'odd');
+    dom.btnEven.classList.toggle('selected', choice === 'even');
+    dom.btnOdd.setAttribute('aria-pressed',  choice === 'odd'  ? 'true' : 'false');
+    dom.btnEven.setAttribute('aria-pressed', choice === 'even' ? 'true' : 'false');
+
+    dom.statusMsg.className = '';
+    dom.statusMsg.textContent =
+      `Tinaya ${formatMoney(state.bet)} sa ${choice.toUpperCase()} — naghihintay…`;
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     BET MODAL
+     ──────────────────────────────────────────────────────────────── */
+  function openBetModal() {
+    if (state.phase !== 'betting') return;
+    syncBetOptions();
+    dom.betModal.classList.add('open');
+    dom.betChipArrow.style.transform = 'rotate(180deg)';
+  }
+
+  function closeBetModal() {
+    dom.betModal.classList.remove('open');
+    dom.betChipArrow.style.transform = '';
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     TOP-UP MODAL
+     ──────────────────────────────────────────────────────────────── */
+  function openTopupModal() {
+    // Pre-select first option if nothing selected yet
+    if (!state.topupAmt) state.topupAmt = TOPUP_OPTIONS[0];
+    syncTopupOptions();
+    dom.topupModal.classList.add('open');
+  }
+
+  function closeTopupModal() {
+    dom.topupModal.classList.remove('open');
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     ADMIN PANEL
+     ──────────────────────────────────────────────────────────────── */
+  function openAdminPanel() {
+    syncAdminQueueUI();
+    dom.adminModal.classList.add('open');
+  }
+
+  function closeAdminPanel() {
+    dom.adminModal.classList.remove('open');
+  }
+
+  function applyAdminSettings() {
+    const newQueue = [];
+    for (let i = 1; i <= 5; i++) {
+      const sel = document.querySelector(`input[name="q${i}"]:checked`);
+      newQueue.push(sel ? sel.value : 'random');
+    }
+    state.rigQueue = newQueue;
+
+    const t = parseInt(dom.adminTimerInput.value, 10);
+    if (!isNaN(t) && t >= 3 && t <= 60) {
+      TIMER_DURATION = t;
+      if (state.phase === 'betting') startTimer();
+    }
+
+    closeAdminPanel();
+    showToast('Nai-apply na ang settings.', 'success', 1800);
+  }
+
+  function syncAdminQueueUI() {
+    state.rigQueue.forEach((val, i) => {
+      const r = document.querySelector(`input[name="q${i+1}"][value="${val}"]`);
+      if (r) r.checked = true;
+    });
+    dom.adminTimerInput.value = TIMER_DURATION;
+  }
+
+  /* ────────────────────────────────────────────────────────────────
+     EVENT LISTENERS
+     ──────────────────────────────────────────────────────────────── */
+
+  // ODD / EVEN
+  dom.btnOdd.addEventListener('click',  () => placeBet('odd'));
+  dom.btnEven.addEventListener('click', () => placeBet('even'));
+
+  // Bet chip → opens bet modal
+  dom.betChip.addEventListener('click',   openBetModal);
+  dom.betChip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openBetModal(); });
+
+  // Close bet modal on backdrop click
+  dom.betModal.addEventListener('click', e => { if (e.target === dom.betModal) closeBetModal(); });
+
+  // Bet amount option buttons
+  document.querySelectorAll('.bet-option-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const amt = parseInt(btn.dataset.amount, 10);
+      if (!isNaN(amt)) state.bet = amt;
+      document.querySelectorAll('.bet-option-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Max bet
+  dom.btnMaxBet.addEventListener('click', () => {
+    state.bet = Math.max(1, state.balance);
+    document.querySelectorAll('.bet-option-btn').forEach(b => b.classList.remove('active'));
+    dom.btnMaxBet.classList.add('active');
+  });
+
+  // Confirm bet selection
+  dom.betConfirmBtn.addEventListener('click', () => {
+    updateBetChip();
+    closeBetModal();
+  });
+
+  // Top-up button → opens top-up modal
+  dom.btnTopup.addEventListener('click', openTopupModal);
+
+  // Close top-up modal on backdrop
+  dom.topupModal.addEventListener('click', e => { if (e.target === dom.topupModal) closeTopupModal(); });
+
+  // Top-up option buttons
+  document.querySelectorAll('.topup-option-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const amt = parseInt(btn.dataset.amount, 10);
+      if (!isNaN(amt)) state.topupAmt = amt;
+      document.querySelectorAll('.topup-option-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Confirm top-up
+  dom.topupConfirmBtn.addEventListener('click', () => {
+    const amt = state.topupAmt || TOPUP_OPTIONS[1];
+    state.balance += amt;
+    updateBalanceDisplay('win');
+    showToast(`${formatMoney(amt)} na idinagdag sa iyong balanse!`, 'success', 2400);
+    closeTopupModal();
+  });
+
+  // Admin trigger (invisible corner tap)
+  dom.adminTrigger.addEventListener('click', openAdminPanel);
+  dom.adminCloseBtn.addEventListener('click', closeAdminPanel);
+  dom.adminModal.addEventListener('click', e => { if (e.target === dom.adminModal) closeAdminPanel(); });
+  dom.adminApplyBtn.addEventListener('click', applyAdminSettings);
+
+  /* ────────────────────────────────────────────────────────────────
+     INIT
+     ──────────────────────────────────────────────────────────────── */
+  function init() {
+    // Set default top-up selection
+    state.topupAmt = TOPUP_OPTIONS[1]; // ₱500 default
+    updateBalanceDisplay();
+    updateBetChip();
+    renderHistory();
+    startTimer();
+  }
+
+  init();
+  </script>
+</body>
+</html>
