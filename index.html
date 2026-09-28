@@ -161,6 +161,7 @@
        ═══════════════════════════════════════════════════════════════ */
     #dice-wrap {
       position: relative;
+      isolation: isolate;
       width: var(--dice-size);
       height: var(--dice-size);
       margin: 0 auto 14px;
@@ -181,41 +182,86 @@
       transition: opacity 0.25s ease;
     }
 
+    #dice-gif { z-index: 0; }
+    #dice-face { z-index: 1; }
+
     /*
      * GIF: shown during rolling, hidden at rest.
      * Face: hidden during rolling, shown at rest.
      *
      * JS toggles the .rolling class on #dice-wrap to switch between them.
      */
-    #dice-gif  { opacity: 0; }   /* hidden by default (resting state) */
-    #dice-face { opacity: 1; }   /* visible by default (resting state) */
+    #dice-gif  { opacity: 0; visibility: hidden; }   /* hidden by default (resting state) */
+    #dice-face { opacity: 1; visibility: visible; }  /* visible by default (resting state) */
 
-    #dice-wrap.rolling #dice-gif  { opacity: 1; }
-    #dice-wrap.rolling #dice-face { opacity: 0; }
+    #dice-wrap.rolling #dice-gif  { opacity: 1; visibility: visible; z-index: 2; }
+    #dice-wrap.rolling #dice-face { opacity: 0; visibility: hidden; }
 
     /*
-     * Face spritesheet display.
-     * The image is 6 faces wide × 1 face tall.
-     * We use background-image + background-size + background-position.
-     * JS sets  data-face="N"  on #dice-face and the CSS rule below
-     * computes the correct horizontal offset.
-     *
-     * background-size: 600% 100%  →  each face fills 100% of the element
-     * background-position-x for face N = (N-1) * 20%
-     *   face 1 → 0%    face 2 → 20%   face 3 → 40%
-     *   face 4 → 60%   face 5 → 80%   face 6 → 100%
-     *
-     * We implement this via inline style set by JS (see showDiceFace()).
+     * Dice face display.
+     * The resting die is drawn with CSS so it stays centered and readable
+     * even if the external sprite asset is unavailable or mismatched.
      */
     #dice-face {
-      /* Reset <img> defaults — we use background-image for sprite slicing */
-      background-image: url('dice faces 1-6 new.png');
-      background-size: 600% 100%;
+      --die-surface: linear-gradient(145deg, #ffffff 0%, #eef2f7 48%, #dbe4ef 100%);
+      --pip-color: #e11d2e;
+      position: absolute;
+      inset: 0;
+      border-radius: 18%;
+      background: var(--die-surface);
+      border: 2px solid rgba(255,255,255,0.72);
+      box-shadow:
+        inset 0 10px 22px rgba(255,255,255,0.52),
+        inset 0 -12px 18px rgba(0,0,0,0.08),
+        0 14px 30px rgba(0,0,0,0.18);
+      overflow: hidden;
+    }
+    #dice-face::before {
+      content: '';
+      position: absolute;
+      inset: 16%;
+      border-radius: 16%;
       background-repeat: no-repeat;
-      background-position: 0% 50%;   /* default face 1 */
-      /* Hide the <img> src itself — content comes from background */
-      color: transparent;
-      font-size: 0;
+      background-size: 100% 100%;
+      background-position: center;
+    }
+    #dice-face[data-face="1"]::before {
+      background-image: radial-gradient(circle at 50% 50%, var(--pip-color) 0 8.5%, transparent 9%);
+    }
+    #dice-face[data-face="2"]::before {
+      background-image:
+        radial-gradient(circle at 24% 24%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 76% 76%, var(--pip-color) 0 8.5%, transparent 9%);
+    }
+    #dice-face[data-face="3"]::before {
+      background-image:
+        radial-gradient(circle at 24% 24%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 50% 50%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 76% 76%, var(--pip-color) 0 8.5%, transparent 9%);
+    }
+    #dice-face[data-face="4"]::before {
+      background-image:
+        radial-gradient(circle at 24% 24%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 76% 24%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 24% 76%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 76% 76%, var(--pip-color) 0 8.5%, transparent 9%);
+    }
+    #dice-face[data-face="5"]::before {
+      background-image:
+        radial-gradient(circle at 24% 24%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 76% 24%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 50% 50%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 24% 76%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 76% 76%, var(--pip-color) 0 8.5%, transparent 9%);
+    }
+    #dice-face[data-face="6"]::before {
+      background-image:
+        radial-gradient(circle at 24% 18%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 24% 50%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 24% 82%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 76% 18%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 76% 50%, var(--pip-color) 0 8.5%, transparent 9%),
+        radial-gradient(circle at 76% 82%, var(--pip-color) 0 8.5%, transparent 9%);
     }
 
     /* ─── Responsive dice size ────────────────────────────────────
@@ -325,6 +371,37 @@
     }
     #bet-chip-value { font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); }
     #bet-chip-arrow { font-size: 0.85rem; color: var(--text-secondary); transition: transform 0.2s; }
+
+    #bet-slip {
+      width: 100%; max-width: 480px;
+      margin-bottom: 18px;
+      padding: 10px 12px;
+      border-radius: var(--r-sm);
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #bet-slip-label {
+      font-size: 0.58rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    #bet-slip-summary {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.35;
+    }
+    #bet-slip-total {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+      letter-spacing: 0.04em;
+    }
 
     /* ═══════════════════════════════════════════════════════════════
        11. ODD / EVEN BUTTONS
@@ -875,7 +952,7 @@
 
     <!-- ── Dice display ──────────────────────────────────────────────
          #dice-gif  = rolling animation  (shown while rolling)
-         #dice-face = spritesheet slice  (shown at rest)
+         #dice-face = CSS die face       (shown at rest)
          JS toggles .rolling on #dice-wrap to swap between them.     -->
     <div id="dice-wrap" aria-label="Dice">
       <!-- Rolling animation — plays during the roll -->
@@ -910,6 +987,12 @@
         <span id="bet-chip-value">₱50</span>
         <span id="bet-chip-arrow">▲</span>
       </div>
+    </div>
+
+    <div id="bet-slip" aria-live="polite">
+      <div id="bet-slip-label">Bet Slip</div>
+      <div id="bet-slip-summary">No bets placed yet.</div>
+      <div id="bet-slip-total">Total staked: ₱0</div>
     </div>
 
     <!-- ODD / EVEN buttons -->
@@ -1074,6 +1157,7 @@
    * Adjust this number (in milliseconds) if the GIF feels too short or too long.
    */
   const GIF_DURATION_MS = 2400;
+  const RESULT_REVEAL_DELAY_MS = 140;
 
   /*
    * POPUP_DURATION_MS — how long the win/lose popup stays on screen
@@ -1082,32 +1166,13 @@
   const POPUP_DURATION_MS = 2800;
 
   /* ────────────────────────────────────────────────────────────────
-     SPRITESHEET FACE POSITIONS
-     ───────────────────────────────────────────────────────────────
-     "dice faces 1-6 new.png" has 6 faces in one horizontal row.
-     background-size: 600% 100%  makes each face fill the element.
-     background-position-x for face N = (N-1) / 5 * 100%
-
-       Face 1 →   0%    Face 2 →  20%    Face 3 →  40%
-       Face 4 →  60%    Face 5 →  80%    Face 6 → 100%
-  */
-  const FACE_POSITION = {
-    1:   '0%',
-    2:  '20%',
-    3:  '40%',
-    4:  '60%',
-    5:  '80%',
-    6: '100%',
-  };
-
-  /* ────────────────────────────────────────────────────────────────
      GAME STATE
      ──────────────────────────────────────────────────────────────── */
   const state = {
     balance:   STARTING_BALANCE,
     bet:       DEFAULT_BET,
     topupAmt:  500,
-    choice:    null,          // 'odd' | 'even' | null
+    bets:      [],            // { choice: 'odd' | 'even', amount: number }[]
     round:     1,
     phase:     'betting',     // 'betting' | 'rolling' | 'result'
     timerSecs: TIMER_DURATION,
@@ -1137,6 +1202,8 @@
     betChipValue:    $('bet-chip-value'),
     betChip:         $('bet-chip'),
     betChipArrow:    $('bet-chip-arrow'),
+    betSlipSummary:  $('bet-slip-summary'),
+    betSlipTotal:    $('bet-slip-total'),
     btnOdd:          $('btn-odd'),
     btnEven:         $('btn-even'),
     btnTopup:        $('btn-topup'),
@@ -1236,8 +1303,8 @@
       dom.popupAmount.textContent   = '-' + formatMoney(amount);
     } else {
       dom.popupEmoji.textContent    = '🎲';
-      dom.popupHeadline.textContent = 'ROLLED ' + diceValue;
-      dom.popupAmount.textContent   = 'No bet placed';
+      dom.popupHeadline.textContent = amount === 0 ? 'BREAK EVEN' : 'ROLLED ' + diceValue;
+      dom.popupAmount.textContent   = amount === 0 ? 'No net change' : 'No bet placed';
     }
 
     dom.popupDiceValue.textContent =
@@ -1312,11 +1379,9 @@
   }
 
   /* ────────────────────────────────────────────────────────────────
-     DICE FACE — spritesheet slice + pop-in animation
+    DICE FACE — CSS-rendered face + pop-in animation
      ──────────────────────────────────────────────────────────────── */
   function showDiceFace(faceNum) {
-    // Set background-position to the correct horizontal slice
-    dom.diceFace.style.backgroundPosition = FACE_POSITION[faceNum] + ' 50%';
     dom.diceFace.setAttribute('aria-label', 'Dice showing ' + faceNum);
     dom.diceFace.dataset.face = faceNum;
 
@@ -1347,6 +1412,39 @@
      ──────────────────────────────────────────────────────────────── */
   function updateBetChip() {
     dom.betChipValue.textContent = formatMoney(state.bet);
+  }
+
+  function getTotalStaked() {
+    return state.bets.reduce((sum, bet) => sum + bet.amount, 0);
+  }
+
+  function renderBetSlip() {
+    if (state.bets.length === 0) {
+      dom.betSlipSummary.textContent = 'No bets placed yet.';
+      dom.betSlipTotal.textContent = 'Total staked: ₱0';
+      dom.btnOdd.classList.remove('selected');
+      dom.btnEven.classList.remove('selected');
+      dom.btnOdd.setAttribute('aria-pressed', 'false');
+      dom.btnEven.setAttribute('aria-pressed', 'false');
+      return;
+    }
+
+    const groups = new Map();
+    state.bets.forEach(bet => {
+      const key = `${bet.choice}:${bet.amount}`;
+      const group = groups.get(key) || { choice: bet.choice, amount: bet.amount, count: 0 };
+      group.count += 1;
+      groups.set(key, group);
+    });
+
+    dom.betSlipSummary.textContent = Array.from(groups.values())
+      .map(group => `${group.count}x ${formatMoney(group.amount)} ${group.choice.toUpperCase()}`)
+      .join(' · ');
+    dom.betSlipTotal.textContent = `Total staked: ${formatMoney(getTotalStaked())}`;
+    dom.btnOdd.classList.toggle('selected', state.bets.some(bet => bet.choice === 'odd'));
+    dom.btnEven.classList.toggle('selected', state.bets.some(bet => bet.choice === 'even'));
+    dom.btnOdd.setAttribute('aria-pressed', state.bets.some(bet => bet.choice === 'odd') ? 'true' : 'false');
+    dom.btnEven.setAttribute('aria-pressed', state.bets.some(bet => bet.choice === 'even') ? 'true' : 'false');
   }
 
   function syncBetOptions() {
@@ -1420,6 +1518,8 @@
     lockBettingUI(true);
     hideRolledOverlay();
 
+    dom.diceFace.style.display = 'none';
+
     dom.statusMsg.className = 'rolling';
     dom.statusMsg.textContent = 'Rolling…';
 
@@ -1431,10 +1531,14 @@
 
     // ── Step 2: after GIF completes, swap to face image ──
     setTimeout(() => {
-      dom.diceWrap.classList.remove('rolling');  // hides GIF, shows face div
-      showDiceFace(result);                      // set the correct spritesheet slice
-      showRolledOverlay(result);                 // show large result number below
-      resolveRound(result);
+      dom.diceWrap.classList.remove('rolling');  // stop the roll animation first
+
+      setTimeout(() => {
+        dom.diceFace.style.display = '';
+        showDiceFace(result);                    // reveal the rolled face cleanly
+        showRolledOverlay(result);               // show large result number below
+        resolveRound(result);
+      }, RESULT_REVEAL_DELAY_MS);
     }, GIF_DURATION_MS);
   }
 
@@ -1444,27 +1548,36 @@
   function resolveRound(diceValue) {
     state.phase = 'result';
     const isOdd  = diceValue % 2 !== 0;
-    const didBet = state.choice !== null;
+    const didBet = state.bets.length > 0;
 
     pushHistory(diceValue);
 
     if (didBet) {
-      const win = (state.choice === 'odd') === isOdd;
+      const winningChoice = isOdd ? 'odd' : 'even';
+      const winningBets = state.bets.filter(bet => bet.choice === winningChoice);
+      const losingBets = state.bets.filter(bet => bet.choice !== winningChoice);
+      const winTotal = winningBets.reduce((sum, bet) => sum + bet.amount, 0);
+      const loseTotal = losingBets.reduce((sum, bet) => sum + bet.amount, 0);
+      const net = winTotal - loseTotal;
 
-      if (win) {
-        state.balance += state.bet;
-        spawnFloatText(state.bet, true);
-        updateBalanceDisplay('win');
+      if (winTotal > 0) spawnFloatText(winTotal, true);
+      if (loseTotal > 0) spawnFloatText(loseTotal, false);
+
+      state.balance = Math.max(0, state.balance + net);
+      updateBalanceDisplay(net >= 0 ? 'win' : 'lose');
+
+      if (net > 0) {
         dom.statusMsg.className = 'win';
-        dom.statusMsg.textContent = `🎉 Rolled ${diceValue} — You won ${formatMoney(state.bet)}!`;
-        showResultPopup('win', diceValue, state.bet);
-      } else {
-        state.balance = Math.max(0, state.balance - state.bet);
-        spawnFloatText(state.bet, false);
-        updateBalanceDisplay('lose');
+        dom.statusMsg.textContent = `🎉 Rolled ${diceValue} — You won ${formatMoney(net)}!`;
+        showResultPopup('win', diceValue, net);
+      } else if (net < 0) {
         dom.statusMsg.className = 'lose';
-        dom.statusMsg.textContent = `💀 Rolled ${diceValue} — You lost ${formatMoney(state.bet)}`;
-        showResultPopup('lose', diceValue, state.bet);
+        dom.statusMsg.textContent = `💀 Rolled ${diceValue} — You lost ${formatMoney(Math.abs(net))}`;
+        showResultPopup('lose', diceValue, Math.abs(net));
+      } else {
+        dom.statusMsg.className = '';
+        dom.statusMsg.textContent = `Rolled ${diceValue} (${isOdd ? 'Odd' : 'Even'}) — You broke even`;
+        showResultPopup('neutral', diceValue, 0);
       }
     } else {
       dom.statusMsg.className = '';
@@ -1502,30 +1615,29 @@
   }
 
   function clearBetChoice() {
-    state.choice = null;
-    dom.btnOdd.classList.remove('selected');
-    dom.btnEven.classList.remove('selected');
-    dom.btnOdd.setAttribute('aria-pressed', 'false');
-    dom.btnEven.setAttribute('aria-pressed', 'false');
+    state.bets = [];
+    renderBetSlip();
   }
 
   function placeBet(choice) {
     if (state.phase !== 'betting') return;
 
-    if (state.balance <= 0 || state.balance < state.bet) {
+    const available = state.balance - getTotalStaked();
+    if (available < state.bet) {
       showToast("You don't have enough balance. Please top up.", 'error');
       return;
     }
 
-    state.choice = choice;
-    dom.btnOdd.classList.toggle('selected',  choice === 'odd');
-    dom.btnEven.classList.toggle('selected', choice === 'even');
-    dom.btnOdd.setAttribute('aria-pressed',  choice === 'odd'  ? 'true' : 'false');
-    dom.btnEven.setAttribute('aria-pressed', choice === 'even' ? 'true' : 'false');
+    state.bets.push({ choice, amount: state.bet });
+    renderBetSlip();
+
+    const totalForChoice = state.bets
+      .filter(bet => bet.choice === choice)
+      .reduce((sum, bet) => sum + bet.amount, 0);
 
     dom.statusMsg.className = '';
     dom.statusMsg.textContent =
-      `Bet ${formatMoney(state.bet)} on ${choice.toUpperCase()} — waiting for roll…`;
+      `Added ${formatMoney(state.bet)} to ${choice.toUpperCase()}. ${choice.toUpperCase()} total: ${formatMoney(totalForChoice)}.`;
   }
 
   /* ────────────────────────────────────────────────────────────────
@@ -1665,6 +1777,7 @@
     showDiceFace(1);            // show face 1 by default on load
     updateBalanceDisplay();
     updateBetChip();
+    renderBetSlip();
     renderHistory();
     startTimer();
   }
