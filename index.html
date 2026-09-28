@@ -3,59 +3,34 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>OddEven Dice — Sugal</title>
+  <title>OddEven Dice</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
   <style>
     /* ═══════════════════════════════════════════════════════════════
-       0.  CSS VARIABLES  — edit here to retheme the whole app
+       0.  CSS VARIABLES — change colours / sizes here
        ═══════════════════════════════════════════════════════════════ */
     :root {
-      --bg-deep:        #070b12;
-      --bg-card:        #0d1520;
-      --bg-overlay:     rgba(7, 11, 18, 0.93);
+      --bg-deep:      #070b12;
+      --bg-card:      #0d1520;
+      --bg-overlay:   rgba(7, 11, 18, 0.93);
 
-      /* accents */
-      --accent-gold:    #f0c040;
-      --accent-blue:    #2dd4ff;
-      --accent-green:   #39ff6a;
-      --accent-red:     #ff3860;
+      --accent-gold:  #f0c040;
+      --accent-blue:  #2dd4ff;
+      --accent-green: #39ff6a;
+      --accent-red:   #ff3860;
 
-      /* text */
       --text-primary:   #e8eaf6;
       --text-secondary: #6b748f;
 
-      /* dice */
-      --face-front:     #ccd8e8;   /* front face colour  — light pearl/silver */
-      --face-side:      #b8c8dc;   /* side face colour   */
-      --face-top:       #dce6f0;   /* top face colour    — lightest */
-      --face-bottom:    #a8b8cc;   /* bottom face colour — darkest  */
-      --face-border:    rgba(180,200,224,0.6);
-      --pip-color:      #1e3a5f;   /* pip colour — dark navy, matches GIF */
-
-      /* radii */
       --r-sm:  8px;
       --r-md: 14px;
       --r-lg: 22px;
 
-      /*
-       * DICE SIZE — three breakpoints.
-       * translateZ MUST equal exactly half the face pixel size.
-       * Faces use border-radius: FACE_RADIUS for soft corners.
-       * To compensate for rounded corners shrinking visual edges,
-       * we make each face 4 px LARGER than the stage and shift it
-       * −2 px so it perfectly overlaps its neighbours.
-       *
-       *  Stage  Face   translateZ
-       *  140    144    72
-       *  160    164    82      (≥ 400 px)
-       *  180    184    92      (≥ 600 px)
-       */
-      --dice-stage: 150px;
-      --dice-face:  154px;
-      --dice-tz:     77px;
-      --face-radius: 32px;   /* very large — pillow / cushion cube like the GIF */
+      /* ── Dice display size ──
+         Change --dice-size to resize both the GIF and the face image */
+      --dice-size: 180px;
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -73,7 +48,7 @@
     }
     body { overflow-y: auto; }
 
-    /* subtle background glow */
+    /* Subtle radial background glow */
     body::before {
       content: '';
       position: fixed; inset: 0;
@@ -92,25 +67,19 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      /* generous padding — extra bottom so bottom-bar never covers content */
       padding: 20px 18px 140px;
-      gap: 0;
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       3.  TOP BAR — logo only (round badge removed)
+       3.  TOP BAR
        ═══════════════════════════════════════════════════════════════ */
     #top-bar {
       width: 100%; max-width: 480px;
-      display: flex;
-      align-items: center;
-      justify-content: center;   /* centred since badge is gone */
+      display: flex; align-items: center; justify-content: center;
       padding: 12px 0 10px;
     }
-
     .logo {
-      font-size: 1.5rem;
-      font-weight: 900;
+      font-size: 1.5rem; font-weight: 900;
       letter-spacing: 0.05em;
       color: var(--accent-gold);
       text-shadow: 0 0 22px rgba(240,192,64,0.55);
@@ -132,19 +101,14 @@
        ═══════════════════════════════════════════════════════════════ */
     #timer-section {
       width: 100%; max-width: 480px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 20px;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 8px; margin-bottom: 20px;
     }
-
     #timer-label {
       font-size: 0.65rem; font-weight: 700;
       letter-spacing: 0.22em; text-transform: uppercase;
       color: var(--text-secondary);
     }
-
     #timer-display {
       font-size: 4.8rem; font-weight: 900; line-height: 1;
       color: var(--accent-gold);
@@ -156,11 +120,9 @@
       color: var(--accent-red);
       text-shadow: 0 0 32px rgba(255,56,96,0.9);
     }
-
     #timer-bar-track {
       width: 100%; max-width: 300px;
-      height: 5px;
-      background: rgba(255,255,255,0.07);
+      height: 5px; background: rgba(255,255,255,0.07);
       border-radius: 5px; overflow: hidden;
     }
     #timer-bar {
@@ -187,167 +149,110 @@
     #status-msg.lose    { color: var(--accent-red); }
 
     /* ═══════════════════════════════════════════════════════════════
-       7.  3-D DICE
-       ═══════════════════════════════════════════════════════════════
-       SOFT CORNERS TECHNIQUE:
-         Each face is 4px wider/taller than the stage and shifted
-         −2px so the rounded corner on one face lines up exactly with
-         its neighbour, hiding the gap. The solid #dice-cube::before
-         plug fills the interior so nothing bleeds through.
-    */
+       7.  DICE DISPLAY
+       ───────────────────────────────────────────────────────────────
+       Two images share the same space inside #dice-wrap:
 
+         #dice-gif   — "Dice roll.gif"        — visible WHILE rolling
+         #dice-face  — "dice faces 1-6 new.png" spritesheet — visible AT REST
+
+       The spritesheet has 6 equal-width faces in a single row.
+       To show face N we shift background-position by -(N-1) * 100/6 %.
+       ═══════════════════════════════════════════════════════════════ */
     #dice-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: var(--dice-stage);
-      margin: 0 auto 6px;
-      flex-shrink: 0;
-    }
-
-    #dice-stage {
-      perspective: 600px;
-      perspective-origin: 50% 38%;
-      width: var(--dice-stage);
-      height: var(--dice-stage);
-      /* soft white halo glow around the die — matches GIF */
-      filter: drop-shadow(0 0 28px rgba(180,210,240,0.55))
-              drop-shadow(0 4px 16px rgba(100,140,200,0.35));
-    }
-
-    #dice-cube {
-      width: var(--dice-stage);
-      height: var(--dice-stage);
       position: relative;
-      transform-style: preserve-3d;
-      transform: rotateX(-22deg) rotateY(25deg);
-      transition: transform 0.4s ease;
+      width: var(--dice-size);
+      height: var(--dice-size);
+      margin: 0 auto 14px;
+      flex-shrink: 0;
+      /* soft glow around the die */
+      filter: drop-shadow(0 0 24px rgba(200,220,255,0.35))
+              drop-shadow(0 6px 18px rgba(0,0,0,0.55));
     }
 
-    /* solid interior — no bleed-through */
-    #dice-cube::before {
-      content: '';
+    /* Both images are stacked absolutely inside the wrap */
+    #dice-gif,
+    #dice-face {
       position: absolute;
-      top: 10px; left: 10px;
-      right: 10px; bottom: 10px;
-      background: #b0c4d8;
-      z-index: 0;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;   /* keep aspect ratio, no cropping */
+      transition: opacity 0.25s ease;
     }
 
-    /* roll animation */
-    @keyframes diceRoll {
-      0%   { transform: rotateX(-22deg)  rotateY(25deg); }
-      18%  { transform: rotateX(210deg)  rotateY(170deg)  rotateZ(75deg); }
-      36%  { transform: rotateX(430deg)  rotateY(390deg)  rotateZ(-55deg); }
-      55%  { transform: rotateX(650deg)  rotateY(230deg)  rotateZ(100deg); }
-      74%  { transform: rotateX(830deg)  rotateY(570deg)  rotateZ(-25deg); }
-      100% { transform: var(--final-rotation, rotateX(-22deg) rotateY(25deg)); }
-    }
-    #dice-cube.rolling {
-      animation: diceRoll 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-    }
+    /*
+     * GIF: shown during rolling, hidden at rest.
+     * Face: hidden during rolling, shown at rest.
+     *
+     * JS toggles the .rolling class on #dice-wrap to switch between them.
+     */
+    #dice-gif  { opacity: 0; }   /* hidden by default (resting state) */
+    #dice-face { opacity: 1; }   /* visible by default (resting state) */
 
-    /* ── faces ── */
-    .face {
-      position: absolute;
-      width: var(--dice-face);
-      height: var(--dice-face);
-      top:  -2px;
-      left: -2px;
-      border-radius: var(--face-radius);   /* PILLOW CORNERS */
-      /* No outline — use border for a clean edge */
-      border: 1.5px solid rgba(160,185,210,0.7);
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(3, 1fr);
-      padding: 18px;
-      gap: 0;
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-      /*
-       * Soft texture: strong top highlight + bottom shadow = "inflated" pillow look
-       * Matches the GIF's glossy pearl surface
-       */
-      box-shadow:
-        inset 0  6px 14px rgba(255,255,255,0.75),
-        inset 0 -6px 14px rgba(80,110,150,0.30),
-        inset 6px  0 12px rgba(255,255,255,0.35),
-        inset -6px 0 12px rgba(80,110,150,0.20);
+    #dice-wrap.rolling #dice-gif  { opacity: 1; }
+    #dice-wrap.rolling #dice-face { opacity: 0; }
+
+    /*
+     * Face spritesheet display.
+     * The image is 6 faces wide × 1 face tall.
+     * We use background-image + background-size + background-position.
+     * JS sets  data-face="N"  on #dice-face and the CSS rule below
+     * computes the correct horizontal offset.
+     *
+     * background-size: 600% 100%  →  each face fills 100% of the element
+     * background-position-x for face N = (N-1) * 20%
+     *   face 1 → 0%    face 2 → 20%   face 3 → 40%
+     *   face 4 → 60%   face 5 → 80%   face 6 → 100%
+     *
+     * We implement this via inline style set by JS (see showDiceFace()).
+     */
+    #dice-face {
+      /* Reset <img> defaults — we use background-image for sprite slicing */
+      background-image: url('dice faces 1-6 new.png');
+      background-size: 600% 100%;
+      background-repeat: no-repeat;
+      background-position: 0% 50%;   /* default face 1 */
+      /* Hide the <img> src itself — content comes from background */
+      color: transparent;
+      font-size: 0;
     }
 
-    /* per-face colour — all light silver-blue tones, like the GIF */
-    .face-1 { background: linear-gradient(145deg, #dce8f4 0%, #b8cce0 100%); } /* front */
-    .face-2 { background: linear-gradient(145deg, #b0c2d6 0%, #96aec4 100%); } /* back  */
-    .face-3 { background: linear-gradient(145deg, #bccedd 0%, #a2b8cc 100%); } /* right */
-    .face-4 { background: linear-gradient(145deg, #c4d4e4 0%, #aabcce 100%); } /* left  */
-    .face-5 { background: linear-gradient(145deg, #e4eef8 0%, #c8daea 100%); } /* top   */
-    .face-6 { background: linear-gradient(145deg, #a8bccc 0%, #8ea6bc 100%); } /* bottom*/
+    /* ─── Responsive dice size ────────────────────────────────────
+       Increase --dice-size at wider viewports.
+       All other dice behaviour scales automatically.             */
+    @media (min-width: 400px) { :root { --dice-size: 200px; } }
+    @media (min-width: 600px) { :root { --dice-size: 220px; } }
 
-    /* face placement — translateZ = dice-face / 2 = 77px */
-    .face-1 { transform: translateZ(77px); }
-    .face-2 { transform: rotateY(180deg) translateZ(77px); }
-    .face-3 { transform: rotateY( 90deg) translateZ(77px); }
-    .face-4 { transform: rotateY(-90deg) translateZ(77px); }
-    .face-5 { transform: rotateX( 90deg) translateZ(77px); }
-    .face-6 { transform: rotateX(-90deg) translateZ(77px); }
-
-    /* ── pips ──
-       The GIF shows dark navy curved dash-like marks, not round dots.
-       We approximate this with a wide rounded rectangle (pill shape).   */
-    .pip {
-      display: flex; align-items: center; justify-content: center;
-      opacity: 0;
-    }
-    .pip.v { opacity: 1; }
-    .pip.v::before {
-      content: '';
-      display: block;
-      /* Wide pill = the curved dash look from the GIF */
-      width: 18px;
-      height: 10px;
-      border-radius: 6px;
-      background: var(--pip-color);     /* dark navy #1e3a5f */
-      /* Slight top shine keeps the raised feel */
-      box-shadow:
-        0 2px 4px rgba(0,0,0,0.35),
-        inset 0 1px 1px rgba(255,255,255,0.18);
-      /* Slight rotation for the casual tilt the GIF shows */
-      transform: rotate(-8deg);
-    }
-
-    /* ── rolled-number display ────────────────────────────────────
-       Lives BELOW the dice (not overlaid on it) so the number is
-       always large and clear — matching the GIF reference.
-       Implemented as a card that slides in after the roll settles.  */
+    /* ═══════════════════════════════════════════════════════════════
+       8.  ROLLED RESULT CARD
+       ───────────────────────────────────────────────────────────────
+       Shown BELOW the dice after each roll — large and clear.
+       Slides up + fades in, fades out when next round starts.
+       ═══════════════════════════════════════════════════════════════ */
     #rolled-overlay {
-      /* positioned below the dice-wrap via normal flow (not absolute) */
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       gap: 4px;
-      padding: 10px 28px 12px;
+      padding: 10px 32px 12px;
       border-radius: var(--r-md);
-      /* hidden until a result arrives */
-      opacity: 0;
-      transform: translateY(8px) scale(0.92);
-      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34,1.2,0.64,1);
-      pointer-events: none;
-      margin-top: 10px;
-      /* subtle card background */
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.08);
-      min-width: 120px;
+      min-width: 130px;
+      /* hidden until result */
+      opacity: 0;
+      transform: translateY(10px) scale(0.9);
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34,1.2,0.64,1);
+      pointer-events: none;
+      margin-bottom: 16px;
     }
     #rolled-overlay.show {
       opacity: 1;
       transform: translateY(0) scale(1);
     }
-
     #rolled-number {
-      font-size: 4.5rem;
-      font-weight: 900;
-      line-height: 1;
+      font-size: 4.5rem; font-weight: 900; line-height: 1;
       color: #fff;
       text-shadow:
         0 0 24px rgba(255,255,255,1),
@@ -356,50 +261,16 @@
       letter-spacing: -0.02em;
     }
     #rolled-parity {
-      font-size: 0.7rem;
-      font-weight: 800;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
+      font-size: 0.72rem; font-weight: 800;
+      letter-spacing: 0.22em; text-transform: uppercase;
     }
     #rolled-parity.odd-label  { color: var(--accent-blue); }
     #rolled-parity.even-label { color: var(--accent-gold); }
 
-    /* responsive dice sizes */
-    @media (min-width: 400px) {
-      :root {
-        --dice-stage: 170px;
-        --dice-face:  174px;
-        --dice-tz:     87px;
-        --face-radius: 36px;
-      }
-      .face-1 { transform: translateZ(87px); }
-      .face-2 { transform: rotateY(180deg) translateZ(87px); }
-      .face-3 { transform: rotateY( 90deg) translateZ(87px); }
-      .face-4 { transform: rotateY(-90deg) translateZ(87px); }
-      .face-5 { transform: rotateX( 90deg) translateZ(87px); }
-      .face-6 { transform: rotateX(-90deg) translateZ(87px); }
-      .pip.v::before { width: 20px; height: 11px; }
-    }
-    @media (min-width: 600px) {
-      :root {
-        --dice-stage: 190px;
-        --dice-face:  194px;
-        --dice-tz:     97px;
-        --face-radius: 40px;
-      }
-      .face-1 { transform: translateZ(97px); }
-      .face-2 { transform: rotateY(180deg) translateZ(97px); }
-      .face-3 { transform: rotateY( 90deg) translateZ(97px); }
-      .face-4 { transform: rotateY(-90deg) translateZ(97px); }
-      .face-5 { transform: rotateX( 90deg) translateZ(97px); }
-      .face-6 { transform: rotateX(-90deg) translateZ(97px); }
-      .pip.v::before { width: 22px; height: 12px; }
-      #timer-display { font-size: 5.5rem; }
-      #rolled-number { font-size: 5rem; }
-    }
+    @media (min-width: 600px) { #rolled-number { font-size: 5rem; } }
 
     /* ═══════════════════════════════════════════════════════════════
-       8.  HISTORY STRIP
+       9.  HISTORY STRIP
        ═══════════════════════════════════════════════════════════════ */
     #results-strip {
       display: flex; gap: 6px; align-items: center;
@@ -426,7 +297,7 @@
     .result-bubble.even { background: rgba(240,192,64,0.12);  border-color: var(--accent-gold); color: var(--accent-gold); }
 
     /* ═══════════════════════════════════════════════════════════════
-       9.  BET CHIP  (opens bet-amount modal)
+       10. BET CHIP
        ═══════════════════════════════════════════════════════════════ */
     #bet-row {
       width: 100%; max-width: 480px;
@@ -445,24 +316,18 @@
       border-radius: var(--r-sm);
       padding: 11px 16px;
       display: flex; align-items: center; justify-content: space-between;
-      cursor: pointer;
-      min-height: 50px;
+      cursor: pointer; min-height: 50px;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
     #bet-chip:hover, #bet-chip:active {
       border-color: var(--accent-gold);
       box-shadow: 0 0 16px rgba(240,192,64,0.25);
     }
-    #bet-chip-value {
-      font-size: 1.15rem; font-weight: 800; color: var(--accent-gold);
-    }
-    #bet-chip-arrow {
-      font-size: 0.85rem; color: var(--text-secondary);
-      transition: transform 0.2s;
-    }
+    #bet-chip-value { font-size: 1.15rem; font-weight: 800; color: var(--accent-gold); }
+    #bet-chip-arrow { font-size: 0.85rem; color: var(--text-secondary); transition: transform 0.2s; }
 
     /* ═══════════════════════════════════════════════════════════════
-       10. ODD / EVEN BUTTONS
+       11. ODD / EVEN BUTTONS
        ═══════════════════════════════════════════════════════════════ */
     #bet-buttons {
       width: 100%; max-width: 480px;
@@ -498,7 +363,6 @@
       box-shadow: 0 0 40px rgba(45,212,255,0.6), 0 4px 16px rgba(45,212,255,0.35);
       color: #fff;
     }
-
     #btn-even {
       background: linear-gradient(135deg, #2a1f08, #1e1604);
       border: 2px solid var(--accent-gold);
@@ -511,12 +375,11 @@
       box-shadow: 0 0 40px rgba(240,192,64,0.6), 0 4px 16px rgba(240,192,64,0.35);
       color: #fff;
     }
-
     .bet-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
     .btn-sub { display: block; font-size: 0.62rem; font-weight: 600; letter-spacing: 0.08em; margin-top: 4px; opacity: 0.7; }
 
     /* ═══════════════════════════════════════════════════════════════
-       11. BOTTOM BAR  (balance + top-up)
+       12. BOTTOM BAR
        ═══════════════════════════════════════════════════════════════ */
     #bottom-bar {
       position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
@@ -556,7 +419,7 @@
     #btn-topup:active { transform: scale(0.95); }
 
     /* ═══════════════════════════════════════════════════════════════
-       12. MODALS  (shared base styles)
+       13. MODALS — shared base
        ═══════════════════════════════════════════════════════════════ */
     .modal-overlay {
       position: fixed; inset: 0; z-index: 200;
@@ -568,7 +431,6 @@
     }
     .modal-overlay.open { opacity: 1; pointer-events: all; }
 
-    /* bottom-sheet style */
     .modal-sheet {
       width: 100%; max-width: 480px;
       background: var(--bg-card);
@@ -580,7 +442,6 @@
     }
     .modal-overlay.open .modal-sheet { transform: translateY(0); }
 
-    /* centred modal (admin) */
     .modal-sheet.centered {
       align-self: center;
       border-radius: var(--r-lg);
@@ -598,7 +459,7 @@
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       13. BET AMOUNT MODAL
+       14. BET AMOUNT MODAL
        ═══════════════════════════════════════════════════════════════ */
     #bet-options {
       display: grid; grid-template-columns: repeat(3, 1fr);
@@ -610,8 +471,7 @@
       border-radius: var(--r-sm);
       color: var(--text-primary);
       font-family: inherit; font-size: 1rem; font-weight: 700;
-      padding: 14px 6px; cursor: pointer;
-      min-height: 54px;
+      padding: 14px 6px; cursor: pointer; min-height: 54px;
       transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, color 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
@@ -635,7 +495,7 @@
     #bet-confirm-btn:active { transform: scale(0.97); }
 
     /* ═══════════════════════════════════════════════════════════════
-       14. TOP-UP MODAL  (new — pick how much to add)
+       15. TOP-UP MODAL
        ═══════════════════════════════════════════════════════════════ */
     #topup-options {
       display: grid; grid-template-columns: repeat(3, 1fr);
@@ -647,8 +507,7 @@
       border-radius: var(--r-sm);
       color: var(--text-primary);
       font-family: inherit; font-size: 0.95rem; font-weight: 700;
-      padding: 14px 6px; cursor: pointer;
-      min-height: 54px;
+      padding: 14px 6px; cursor: pointer; min-height: 54px;
       transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, color 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
@@ -664,10 +523,8 @@
       border: 2px solid var(--accent-green);
       color: var(--accent-green);
       font-family: inherit; font-size: 1rem; font-weight: 900;
-      padding: 15px; cursor: pointer;
-      border-radius: var(--r-sm);
-      letter-spacing: 0.06em; text-transform: uppercase;
-      min-height: 54px;
+      padding: 15px; cursor: pointer; border-radius: var(--r-sm);
+      letter-spacing: 0.06em; text-transform: uppercase; min-height: 54px;
       transition: box-shadow 0.2s, transform 0.1s;
       -webkit-tap-highlight-color: transparent;
     }
@@ -675,7 +532,7 @@
     #topup-confirm-btn:active { transform: scale(0.97); }
 
     /* ═══════════════════════════════════════════════════════════════
-       15. FLOATING WIN/LOSE TEXT
+       16. FLOATING WIN / LOSE TEXT
        ═══════════════════════════════════════════════════════════════ */
     .float-text {
       position: fixed; left: 50%; bottom: 100px;
@@ -694,7 +551,7 @@
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       16. TOAST
+       17. TOAST
        ═══════════════════════════════════════════════════════════════ */
     #toast {
       position: fixed; top: 20px; left: 50%;
@@ -720,16 +577,15 @@
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       17. ADMIN PANEL
+       18. ADMIN PANEL
        ═══════════════════════════════════════════════════════════════ */
-    /* invisible tap zone — top-right corner */
+    /* Invisible tap zone — top-right corner. No visual hint. */
     #admin-trigger {
       position: fixed; top: 0; right: 0;
       width: 64px; height: 64px;
       background: transparent; border: none;
       cursor: pointer; z-index: 500;
     }
-
     .admin-header {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 20px; padding-bottom: 14px;
@@ -742,8 +598,7 @@
     }
     #admin-close-btn {
       background: rgba(255,56,96,0.1);
-      border: 1.5px solid var(--accent-red);
-      color: var(--accent-red);
+      border: 1.5px solid var(--accent-red); color: var(--accent-red);
       font-family: inherit; font-size: 0.75rem; font-weight: 800;
       padding: 7px 15px; border-radius: 6px;
       cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase;
@@ -753,9 +608,7 @@
       letter-spacing: 0.2em; text-transform: uppercase;
       color: var(--text-secondary); margin: 20px 0 12px;
     }
-    .queue-row {
-      display: flex; align-items: center; gap: 8px; margin-bottom: 9px;
-    }
+    .queue-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
     .queue-roll-label {
       font-size: 0.75rem; font-weight: 700;
       color: var(--text-secondary); width: 46px; flex-shrink: 0;
@@ -778,7 +631,6 @@
     .queue-toggle input[value="odd"]:checked    + label { background: rgba(45,212,255,0.2);  color: var(--accent-blue); }
     .queue-toggle input[value="even"]:checked   + label { background: rgba(240,192,64,0.2);  color: var(--accent-gold); }
     .queue-toggle input[value="random"]:checked + label { background: rgba(255,255,255,0.07); color: var(--text-primary); }
-
     .admin-control-row {
       display: flex; align-items: center; gap: 14px; margin-bottom: 8px;
     }
@@ -787,10 +639,8 @@
       color: var(--text-secondary); flex: 1;
     }
     #admin-timer-input {
-      width: 72px;
-      background: var(--bg-deep);
-      border: 1.5px solid rgba(240,192,64,0.3);
-      border-radius: 6px;
+      width: 72px; background: var(--bg-deep);
+      border: 1.5px solid rgba(240,192,64,0.3); border-radius: 6px;
       color: var(--accent-gold);
       font-family: inherit; font-size: 1rem; font-weight: 800;
       padding: 9px 10px; text-align: center; outline: none;
@@ -799,13 +649,11 @@
     #admin-apply-btn {
       width: 100%;
       background: linear-gradient(135deg, #1a2c1a, #102010);
-      border: 1.5px solid var(--accent-green);
-      color: var(--accent-green);
+      border: 1.5px solid var(--accent-green); color: var(--accent-green);
       font-family: inherit; font-size: 0.87rem; font-weight: 800;
       padding: 13px; border-radius: var(--r-sm);
       cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase;
-      margin-top: 18px;
-      transition: box-shadow 0.2s, transform 0.1s;
+      margin-top: 18px; transition: box-shadow 0.2s, transform 0.1s;
     }
     #admin-apply-btn:hover  { box-shadow: 0 0 20px rgba(57,255,106,0.3); }
     #admin-apply-btn:active { transform: scale(0.97); }
@@ -815,8 +663,185 @@
     }
 
     /* ═══════════════════════════════════════════════════════════════
-       18. MISC
+       18b. DICE FACE POP-IN ANIMATION
+       ───────────────────────────────────────────────────────────────
+       When the GIF stops and the face image appears, we play a
+       springy bounce-in + glow flash so it doesn't just snap in.
+       JS adds .pop-in to #dice-face, which triggers this keyframe.
        ═══════════════════════════════════════════════════════════════ */
+    @keyframes facePopIn {
+      0%   { transform: scale(0.55) rotate(-8deg); opacity: 0;   filter: brightness(2.5) blur(4px); }
+      55%  { transform: scale(1.12) rotate( 3deg); opacity: 1;   filter: brightness(1.4) blur(0px); }
+      75%  { transform: scale(0.95) rotate(-1deg); opacity: 1;   filter: brightness(1.0); }
+      100% { transform: scale(1.00) rotate( 0deg); opacity: 1;   filter: brightness(1.0); }
+    }
+    #dice-face.pop-in {
+      animation: facePopIn 0.55s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       18c. WIN / LOSE RESULT POPUP
+       ───────────────────────────────────────────────────────────────
+       Full-screen overlay that appears after each roll resolution.
+       Slides up from bottom, auto-dismisses after 2.5 s.
+       ═══════════════════════════════════════════════════════════════ */
+    #result-popup {
+      position: fixed;
+      inset: 0;
+      z-index: 350;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      /* hidden by default */
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    #result-popup.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* dark scrim behind the card */
+    #result-popup::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    #result-popup-card {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 36px 48px 32px;
+      border-radius: 28px;
+      min-width: 260px;
+      text-align: center;
+      /* animated in */
+      transform: scale(0.7) translateY(60px);
+      opacity: 0;
+      transition: transform 0.45s cubic-bezier(0.34, 1.45, 0.64, 1),
+                  opacity   0.3s ease;
+    }
+    #result-popup.show #result-popup-card {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    /* WIN card */
+    #result-popup-card.win-card {
+      background: linear-gradient(160deg, #0a2f12 0%, #072010 100%);
+      border: 2px solid var(--accent-green);
+      box-shadow:
+        0 0 60px rgba(57,255,106,0.4),
+        0 0 120px rgba(57,255,106,0.15),
+        inset 0 1px 0 rgba(57,255,106,0.2);
+    }
+    /* LOSE card */
+    #result-popup-card.lose-card {
+      background: linear-gradient(160deg, #2e0810 0%, #1e0408 100%);
+      border: 2px solid var(--accent-red);
+      box-shadow:
+        0 0 60px rgba(255,56,96,0.4),
+        0 0 120px rgba(255,56,96,0.15),
+        inset 0 1px 0 rgba(255,56,96,0.2);
+    }
+    /* NO BET card */
+    #result-popup-card.neutral-card {
+      background: linear-gradient(160deg, #0d1a2e 0%, #070e1c 100%);
+      border: 2px solid rgba(255,255,255,0.12);
+      box-shadow: 0 0 40px rgba(0,0,0,0.5);
+    }
+
+    #popup-emoji {
+      font-size: 3.2rem;
+      line-height: 1;
+      /* bouncy entrance after card appears */
+      animation: emojiBounce 0.5s 0.3s cubic-bezier(0.34,1.6,0.64,1) both;
+    }
+    @keyframes emojiBounce {
+      from { transform: scale(0) rotate(-20deg); }
+      to   { transform: scale(1) rotate(0deg); }
+    }
+
+    #popup-headline {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+    .win-card  #popup-headline { color: var(--accent-green); text-shadow: 0 0 24px rgba(57,255,106,0.7); }
+    .lose-card #popup-headline { color: var(--accent-red);   text-shadow: 0 0 24px rgba(255,56,96,0.7); }
+    .neutral-card #popup-headline { color: var(--text-secondary); }
+
+    #popup-amount {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+    .win-card  #popup-amount { color: #fff; }
+    .lose-card #popup-amount { color: rgba(255,255,255,0.7); }
+    .neutral-card #popup-amount { color: var(--text-secondary); }
+
+    #popup-dice-value {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* Shrinking progress bar shows how long until auto-close */
+    #popup-timer-bar {
+      width: 100%;
+      height: 3px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      margin-top: 16px;
+      overflow: hidden;
+    }
+    #popup-timer-fill {
+      height: 100%;
+      width: 100%;
+      border-radius: 3px;
+      transform-origin: left center;
+      /* JS sets transition duration to match POPUP_DURATION_MS */
+    }
+    .win-card  #popup-timer-fill { background: var(--accent-green); }
+    .lose-card #popup-timer-fill { background: var(--accent-red); }
+    .neutral-card #popup-timer-fill { background: var(--text-secondary); }
+
+    /* tap-to-dismiss hint */
+    #popup-dismiss {
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.25);
+      margin-top: 6px;
+    }
+
+    /* confetti particles (win only) */
+    .confetti {
+      position: absolute;
+      width: 8px; height: 8px;
+      border-radius: 2px;
+      pointer-events: none;
+      animation: confettiFall linear forwards;
+    }
+    @keyframes confettiFall {
+      0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+      100% { transform: translateY(260px) rotate(540deg); opacity: 0; }
+    }
+
+
     .hidden { display: none !important; }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg-deep); }
@@ -825,13 +850,13 @@
 </head>
 <body>
 
-  <!-- ═══ Invisible admin trigger (top-right corner) ═══ -->
+  <!-- Invisible admin trigger — top-right corner tap zone -->
   <button id="admin-trigger" aria-label="" title=""></button>
 
   <!-- ═══ Main App ═══ -->
   <main id="app">
 
-    <!-- Logo bar (round badge removed) -->
+    <!-- Logo -->
     <div id="top-bar">
       <div class="logo">Odd<span>Even</span> Dice</div>
     </div>
@@ -840,67 +865,34 @@
 
     <!-- Countdown timer -->
     <section id="timer-section" aria-label="Countdown timer">
-      <div id="timer-label">Susunod na Hilis</div>
+      <div id="timer-label">Next Roll In</div>
       <div id="timer-display" role="timer" aria-live="polite">8</div>
       <div id="timer-bar-track"><div id="timer-bar"></div></div>
     </section>
 
     <!-- Status line -->
-    <div id="status-msg">Pumili ng taya mo</div>
+    <div id="status-msg">Place your bet below</div>
 
-    <!-- 3-D Dice + rolled-number overlay -->
-    <div id="dice-wrap">
-      <div id="dice-stage" aria-label="3D dice">
-        <div id="dice-cube">
+    <!-- ── Dice display ──────────────────────────────────────────────
+         #dice-gif  = rolling animation  (shown while rolling)
+         #dice-face = spritesheet slice  (shown at rest)
+         JS toggles .rolling on #dice-wrap to swap between them.     -->
+    <div id="dice-wrap" aria-label="Dice">
+      <!-- Rolling animation — plays during the roll -->
+      <img id="dice-gif"
+           src="Dice roll.gif"
+           alt="Rolling dice"
+           draggable="false" />
 
-          <!-- Face 1 — front: single centre pip -->
-          <div class="face face-1" data-face="1">
-            <div class="pip"></div><div class="pip"></div><div class="pip"></div>
-            <div class="pip"></div><div class="pip v"></div><div class="pip"></div>
-            <div class="pip"></div><div class="pip"></div><div class="pip"></div>
-          </div>
+      <!-- Resting face — background-position set by JS to show correct face -->
+      <div id="dice-face"
+           role="img"
+           aria-label="Dice face"
+           data-face="1">
+      </div>
+    </div>
 
-          <!-- Face 2 — back: top-right + bottom-left -->
-          <div class="face face-2" data-face="2">
-            <div class="pip"></div><div class="pip"></div><div class="pip v"></div>
-            <div class="pip"></div><div class="pip"></div><div class="pip"></div>
-            <div class="pip v"></div><div class="pip"></div><div class="pip"></div>
-          </div>
-
-          <!-- Face 3 — right: diagonal 3 -->
-          <div class="face face-3" data-face="3">
-            <div class="pip"></div><div class="pip"></div><div class="pip v"></div>
-            <div class="pip"></div><div class="pip v"></div><div class="pip"></div>
-            <div class="pip v"></div><div class="pip"></div><div class="pip"></div>
-          </div>
-
-          <!-- Face 4 — left: four corners -->
-          <div class="face face-4" data-face="4">
-            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
-            <div class="pip"></div><div class="pip"></div><div class="pip"></div>
-            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
-          </div>
-
-          <!-- Face 5 — top: four corners + centre -->
-          <div class="face face-5" data-face="5">
-            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
-            <div class="pip"></div><div class="pip v"></div><div class="pip"></div>
-            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
-          </div>
-
-          <!-- Face 6 — bottom: two columns of 3 -->
-          <div class="face face-6" data-face="6">
-            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
-            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
-            <div class="pip v"></div><div class="pip"></div><div class="pip v"></div>
-          </div>
-
-        </div><!-- #dice-cube -->
-      </div><!-- #dice-stage -->
-
-    </div><!-- #dice-wrap -->
-
-    <!-- Rolled number — shown BELOW the dice after each roll, large & clear -->
+    <!-- Rolled result card — appears below dice after roll -->
     <div id="rolled-overlay" aria-live="polite">
       <div id="rolled-number">—</div>
       <div id="rolled-parity"></div>
@@ -908,20 +900,20 @@
 
     <!-- History strip -->
     <div id="results-strip">
-      <span id="results-label">Kasaysayan</span>
+      <span id="results-label">History</span>
     </div>
 
-    <!-- Bet chip (opens bet-amount picker) -->
+    <!-- Bet chip -->
     <div id="bet-row">
-      <span id="bet-label">Taya</span>
-      <div id="bet-chip" role="button" tabindex="0" aria-label="Piliin ang halaga ng taya">
+      <span id="bet-label">Bet</span>
+      <div id="bet-chip" role="button" tabindex="0" aria-label="Select bet amount">
         <span id="bet-chip-value">₱50</span>
         <span id="bet-chip-arrow">▲</span>
       </div>
     </div>
 
     <!-- ODD / EVEN buttons -->
-    <div id="bet-buttons" role="group" aria-label="Piliin ang Odd o Even">
+    <div id="bet-buttons" role="group" aria-label="Choose Odd or Even">
       <button class="bet-btn" id="btn-odd"  aria-pressed="false">
         ODD
         <span class="btn-sub">1 · 3 · 5</span>
@@ -935,20 +927,19 @@
   </main>
 
   <!-- ═══ Fixed Bottom Bar ═══ -->
-  <div id="bottom-bar" role="region" aria-label="Balanse">
+  <div id="bottom-bar" role="region" aria-label="Player balance">
     <div id="balance-block">
-      <div id="balance-label">Balanse</div>
+      <div id="balance-label">Balance</div>
       <div id="balance-value">₱1,000</div>
     </div>
-    <button id="btn-topup" aria-label="Mag-top up">+ Top Up</button>
+    <button id="btn-topup" aria-label="Top up balance">+ Top Up</button>
   </div>
 
   <!-- ═══ Bet Amount Modal ═══ -->
-  <div id="bet-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Pumili ng halaga ng taya">
+  <div id="bet-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Select bet amount">
     <div class="modal-sheet">
-      <p class="modal-title">Halaga ng Taya</p>
+      <p class="modal-title">Select Bet Amount</p>
       <div id="bet-options">
-        <!-- amounts match BET_OPTIONS array in JS -->
         <button class="bet-option-btn" data-amount="10">₱10</button>
         <button class="bet-option-btn" data-amount="50">₱50</button>
         <button class="bet-option-btn" data-amount="100">₱100</button>
@@ -956,16 +947,15 @@
         <button class="bet-option-btn" data-amount="1000">₱1,000</button>
         <button class="bet-option-btn" id="btn-max-bet">Max</button>
       </div>
-      <button id="bet-confirm-btn">Kumpirmahin</button>
+      <button id="bet-confirm-btn">Confirm</button>
     </div>
   </div>
 
-  <!-- ═══ Top-Up Modal (new) ═══ -->
-  <div id="topup-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Mag-top up ng balanse">
+  <!-- ═══ Top-Up Modal ═══ -->
+  <div id="topup-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Top up balance">
     <div class="modal-sheet">
-      <p class="modal-title">Dagdag na Balanse</p>
+      <p class="modal-title">Add Balance</p>
       <div id="topup-options">
-        <!-- amounts match TOPUP_OPTIONS array in JS -->
         <button class="topup-option-btn" data-amount="100">₱100</button>
         <button class="topup-option-btn" data-amount="500">₱500</button>
         <button class="topup-option-btn" data-amount="1000">₱1,000</button>
@@ -973,7 +963,7 @@
         <button class="topup-option-btn" data-amount="5000">₱5,000</button>
         <button class="topup-option-btn" data-amount="10000">₱10,000</button>
       </div>
-      <button id="topup-confirm-btn">Idagdag sa Balanse</button>
+      <button id="topup-confirm-btn">Add to Balance</button>
     </div>
   </div>
 
@@ -983,13 +973,13 @@
 
       <div class="admin-header">
         <span class="admin-title">⚙ Admin Panel</span>
-        <button id="admin-close-btn">✕ Isara</button>
+        <button id="admin-close-btn">✕ Close</button>
       </div>
 
-      <div class="admin-section-title">🎲 Itakda ang Susunod na 5 Hilis</div>
+      <div class="admin-section-title">🎲 Rig Next 5 Rolls</div>
 
       <div class="queue-row">
-        <span class="queue-roll-label">Hilis 1</span>
+        <span class="queue-roll-label">Roll 1</span>
         <div class="queue-toggle">
           <input type="radio" name="q1" id="q1-odd"    value="odd"><label for="q1-odd">Odd</label>
           <input type="radio" name="q1" id="q1-even"   value="even"><label for="q1-even">Even</label>
@@ -997,7 +987,7 @@
         </div>
       </div>
       <div class="queue-row">
-        <span class="queue-roll-label">Hilis 2</span>
+        <span class="queue-roll-label">Roll 2</span>
         <div class="queue-toggle">
           <input type="radio" name="q2" id="q2-odd"    value="odd"><label for="q2-odd">Odd</label>
           <input type="radio" name="q2" id="q2-even"   value="even"><label for="q2-even">Even</label>
@@ -1005,7 +995,7 @@
         </div>
       </div>
       <div class="queue-row">
-        <span class="queue-roll-label">Hilis 3</span>
+        <span class="queue-roll-label">Roll 3</span>
         <div class="queue-toggle">
           <input type="radio" name="q3" id="q3-odd"    value="odd"><label for="q3-odd">Odd</label>
           <input type="radio" name="q3" id="q3-even"   value="even"><label for="q3-even">Even</label>
@@ -1013,7 +1003,7 @@
         </div>
       </div>
       <div class="queue-row">
-        <span class="queue-roll-label">Hilis 4</span>
+        <span class="queue-roll-label">Roll 4</span>
         <div class="queue-toggle">
           <input type="radio" name="q4" id="q4-odd"    value="odd"><label for="q4-odd">Odd</label>
           <input type="radio" name="q4" id="q4-even"   value="even"><label for="q4-even">Even</label>
@@ -1021,7 +1011,7 @@
         </div>
       </div>
       <div class="queue-row">
-        <span class="queue-roll-label">Hilis 5</span>
+        <span class="queue-roll-label">Roll 5</span>
         <div class="queue-toggle">
           <input type="radio" name="q5" id="q5-odd"    value="odd"><label for="q5-odd">Odd</label>
           <input type="radio" name="q5" id="q5-even"   value="even"><label for="q5-even">Even</label>
@@ -1029,23 +1019,37 @@
         </div>
       </div>
 
-      <div class="admin-section-title">⏱ Tagal ng Timer (segundo)</div>
+      <div class="admin-section-title">⏱ Timer Duration (seconds)</div>
       <div class="admin-control-row">
-        <label for="admin-timer-input">Haba ng countdown</label>
+        <label for="admin-timer-input">Countdown length</label>
         <input type="number" id="admin-timer-input" min="3" max="60" value="8" />
       </div>
 
-      <button id="admin-apply-btn">✓ I-apply ang Settings</button>
+      <button id="admin-apply-btn">✓ Apply Settings</button>
       <p class="admin-hint">
-        Ang mga naka-rig na hilis ay nalalapat sa susunod na N na rounds.<br>
-        "Rnd" = normal na random.
+        Rigged rolls apply to the next N upcoming rounds in order.<br>
+        "Rnd" = normal random result.
       </p>
 
     </div>
   </div>
 
-  <!-- Toast -->
+  <!-- Toast notification -->
   <div id="toast" role="alert" aria-live="assertive"></div>
+
+  <!-- ═══ Win / Lose Result Popup ═══ -->
+  <div id="result-popup" role="dialog" aria-modal="true" aria-live="assertive">
+    <div id="result-popup-card">
+      <div id="popup-emoji">🎲</div>
+      <div id="popup-headline">—</div>
+      <div id="popup-amount"></div>
+      <div id="popup-dice-value"></div>
+      <div id="popup-timer-bar">
+        <div id="popup-timer-fill"></div>
+      </div>
+      <div id="popup-dismiss">Tap anywhere to dismiss</div>
+    </div>
+  </div>
 
   <!-- ═══════════════════════════════════════════════════════════════
        J A V A S C R I P T
@@ -1054,29 +1058,47 @@
   'use strict';
 
   /* ────────────────────────────────────────────────────────────────
-     CONFIGURATION  — edit these to change game parameters
+     CONFIGURATION — edit these to change game parameters
      ──────────────────────────────────────────────────────────────── */
 
-  // Starting balance in Philippine Peso
-  const STARTING_BALANCE = 1000;
+  const STARTING_BALANCE = 1000;      // Starting balance in Philippine Peso
+  let   TIMER_DURATION   = 8;         // Default countdown seconds (admin can override)
+  const BET_OPTIONS      = [10, 50, 100, 500, 1000];   // Bet modal quick-select amounts
+  const TOPUP_OPTIONS    = [100, 500, 1000, 2000, 5000, 10000]; // Top-up modal amounts
+  const DEFAULT_BET      = 50;        // Starting bet amount
+  const HISTORY_LIMIT    = 6;         // How many past results to show
 
-  // Default countdown timer in seconds (admin can change at runtime)
-  let TIMER_DURATION = 8;
+  /*
+   * GIF_DURATION_MS — how long to show the rolling GIF before revealing the result.
+   * Should roughly match the length of "Dice roll.gif".
+   * Adjust this number (in milliseconds) if the GIF feels too short or too long.
+   */
+  const GIF_DURATION_MS = 2400;
 
-  // Bet quick-select amounts (shown in the bet modal) — edit freely
-  const BET_OPTIONS = [10, 50, 100, 500, 1000];
+  /*
+   * POPUP_DURATION_MS — how long the win/lose popup stays on screen
+   * before auto-dismissing. The shrinking bar visualises this countdown.
+   */
+  const POPUP_DURATION_MS = 2800;
 
-  // Top-up quick-select amounts — edit freely
-  const TOPUP_OPTIONS = [100, 500, 1000, 2000, 5000, 10000];
+  /* ────────────────────────────────────────────────────────────────
+     SPRITESHEET FACE POSITIONS
+     ───────────────────────────────────────────────────────────────
+     "dice faces 1-6 new.png" has 6 faces in one horizontal row.
+     background-size: 600% 100%  makes each face fill the element.
+     background-position-x for face N = (N-1) / 5 * 100%
 
-  // Default starting bet
-  const DEFAULT_BET = 50;
-
-  // How many results to keep in the history strip
-  const HISTORY_LIMIT = 6;
-
-  // Duration (ms) of the CSS roll animation — must match @keyframes diceRoll
-  const ROLL_ANIMATION_MS = 2400;
+       Face 1 →   0%    Face 2 →  20%    Face 3 →  40%
+       Face 4 →  60%    Face 5 →  80%    Face 6 → 100%
+  */
+  const FACE_POSITION = {
+    1:   '0%',
+    2:  '20%',
+    3:  '40%',
+    4:  '60%',
+    5:  '80%',
+    6: '100%',
+  };
 
   /* ────────────────────────────────────────────────────────────────
      GAME STATE
@@ -1084,29 +1106,15 @@
   const state = {
     balance:   STARTING_BALANCE,
     bet:       DEFAULT_BET,
-    topupAmt:  1000,              // selected top-up amount
-    choice:    null,              // 'odd' | 'even' | null
+    topupAmt:  500,
+    choice:    null,          // 'odd' | 'even' | null
     round:     1,
-    phase:     'betting',         // 'betting' | 'rolling' | 'result'
+    phase:     'betting',     // 'betting' | 'rolling' | 'result'
     timerSecs: TIMER_DURATION,
     timerID:   null,
     history:   [],
     // Admin rig queue — 5 entries, each 'odd' | 'even' | 'random'
     rigQueue: ['random','random','random','random','random'],
-  };
-
-  /* ────────────────────────────────────────────────────────────────
-     FACE ROTATION MAP
-     Each face value maps to [rotateX, rotateY] that brings it front.
-     The 720° extra spin is baked in for the tumbling effect.
-     ──────────────────────────────────────────────────────────────── */
-  const FACE_ROTATION = {
-    1: [ -22 + 720,   25 + 720 ],   // front
-    2: [ -22 + 720, -155 + 720 ],   // back
-    3: [ -22 + 720,  -65 + 720 ],   // right
-    4: [ -22 + 720,   65 + 720 ],   // left
-    5: [ -82 + 720,   25 + 720 ],   // top
-    6: [  68 + 720,   25 + 720 ],   // bottom
   };
 
   /* ────────────────────────────────────────────────────────────────
@@ -1118,7 +1126,9 @@
     timerDisplay:    $('timer-display'),
     timerBar:        $('timer-bar'),
     statusMsg:       $('status-msg'),
-    diceCube:        $('dice-cube'),
+    diceWrap:        $('dice-wrap'),
+    diceGif:         $('dice-gif'),
+    diceFace:        $('dice-face'),
     rolledOverlay:   $('rolled-overlay'),
     rolledNumber:    $('rolled-number'),
     rolledParity:    $('rolled-parity'),
@@ -1131,26 +1141,29 @@
     btnEven:         $('btn-even'),
     btnTopup:        $('btn-topup'),
     toast:           $('toast'),
-    // Bet modal
     betModal:        $('bet-modal'),
     betConfirmBtn:   $('bet-confirm-btn'),
     btnMaxBet:       $('btn-max-bet'),
-    // Top-up modal
     topupModal:      $('topup-modal'),
     topupConfirmBtn: $('topup-confirm-btn'),
-    // Admin modal
     adminTrigger:    $('admin-trigger'),
     adminModal:      $('admin-modal'),
     adminCloseBtn:   $('admin-close-btn'),
     adminApplyBtn:   $('admin-apply-btn'),
     adminTimerInput: $('admin-timer-input'),
+    // Result popup
+    resultPopup:      $('result-popup'),
+    resultPopupCard:  $('result-popup-card'),
+    popupEmoji:       $('popup-emoji'),
+    popupHeadline:    $('popup-headline'),
+    popupAmount:      $('popup-amount'),
+    popupDiceValue:   $('popup-dice-value'),
+    popupTimerFill:   $('popup-timer-fill'),
   };
 
   /* ────────────────────────────────────────────────────────────────
      UTILITIES
      ──────────────────────────────────────────────────────────────── */
-
-  // Format number as Philippine Peso — ₱1,000
   function formatMoney(n) {
     return '₱' + Math.abs(n).toLocaleString('en-PH');
   }
@@ -1194,6 +1207,88 @@
   }
 
   /* ────────────────────────────────────────────────────────────────
+     WIN / LOSE RESULT POPUP
+     ──────────────────────────────────────────────────────────────── */
+  let popupTimeout = null;
+
+  /**
+   * Show the full-screen result popup.
+   * @param {'win'|'lose'|'neutral'} type
+   * @param {number}  diceValue  — the rolled number
+   * @param {number|null} amount — bet amount (null for no-bet rounds)
+   */
+  function showResultPopup(type, diceValue, amount) {
+    const card = dom.resultPopupCard;
+    const isOdd = diceValue % 2 !== 0;
+
+    // Set card type class
+    card.className = type === 'win' ? 'win-card' :
+                     type === 'lose' ? 'lose-card' : 'neutral-card';
+
+    // Content
+    if (type === 'win') {
+      dom.popupEmoji.textContent    = '🏆';
+      dom.popupHeadline.textContent = 'YOU WIN!';
+      dom.popupAmount.textContent   = '+' + formatMoney(amount);
+    } else if (type === 'lose') {
+      dom.popupEmoji.textContent    = '💀';
+      dom.popupHeadline.textContent = 'YOU LOST';
+      dom.popupAmount.textContent   = '-' + formatMoney(amount);
+    } else {
+      dom.popupEmoji.textContent    = '🎲';
+      dom.popupHeadline.textContent = 'ROLLED ' + diceValue;
+      dom.popupAmount.textContent   = 'No bet placed';
+    }
+
+    dom.popupDiceValue.textContent =
+      `Dice: ${diceValue} — ${isOdd ? 'ODD' : 'EVEN'}`;
+
+    // Shrinking timer bar
+    const fill = dom.popupTimerFill;
+    fill.style.transition = 'none';
+    fill.style.transform  = 'scaleX(1)';
+    // Force reflow, then start shrinking
+    void fill.offsetWidth;
+    fill.style.transition = `transform ${POPUP_DURATION_MS}ms linear`;
+    fill.style.transform  = 'scaleX(0)';
+
+    // Win confetti burst
+    if (type === 'win') spawnConfetti(card);
+
+    // Show
+    dom.resultPopup.classList.add('show');
+
+    // Auto-dismiss
+    clearTimeout(popupTimeout);
+    popupTimeout = setTimeout(hideResultPopup, POPUP_DURATION_MS);
+  }
+
+  function hideResultPopup() {
+    dom.resultPopup.classList.remove('show');
+    clearTimeout(popupTimeout);
+  }
+
+  /** Spawn coloured confetti squares inside the popup card */
+  function spawnConfetti(container) {
+    const colours = ['#f0c040','#39ff6a','#2dd4ff','#ff3860','#ffffff','#ffaa00'];
+    for (let i = 0; i < 28; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti';
+      el.style.cssText = `
+        left: ${randInt(5, 95)}%;
+        top: ${randInt(-10, 20)}px;
+        background: ${colours[i % colours.length]};
+        width: ${randInt(6, 10)}px;
+        height: ${randInt(6, 10)}px;
+        animation-duration: ${(0.8 + Math.random() * 0.8).toFixed(2)}s;
+        animation-delay: ${(Math.random() * 0.3).toFixed(2)}s;
+      `;
+      container.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
+  }
+
+  /* ────────────────────────────────────────────────────────────────
      HISTORY STRIP
      ──────────────────────────────────────────────────────────────── */
   function pushHistory(val) {
@@ -1217,29 +1312,23 @@
   }
 
   /* ────────────────────────────────────────────────────────────────
-     BET CHIP
+     DICE FACE — spritesheet slice + pop-in animation
      ──────────────────────────────────────────────────────────────── */
-  function updateBetChip() {
-    dom.betChipValue.textContent = formatMoney(state.bet);
-  }
+  function showDiceFace(faceNum) {
+    // Set background-position to the correct horizontal slice
+    dom.diceFace.style.backgroundPosition = FACE_POSITION[faceNum] + ' 50%';
+    dom.diceFace.setAttribute('aria-label', 'Dice showing ' + faceNum);
+    dom.diceFace.dataset.face = faceNum;
 
-  function syncBetOptions() {
-    document.querySelectorAll('.bet-option-btn').forEach(b => {
-      b.classList.toggle('active', parseInt(b.dataset.amount, 10) === state.bet);
-    });
+    // Trigger the bounce-in animation: remove then re-add the class
+    dom.diceFace.classList.remove('pop-in');
+    // Force a reflow so the browser registers the removal before re-adding
+    void dom.diceFace.offsetWidth;
+    dom.diceFace.classList.add('pop-in');
   }
 
   /* ────────────────────────────────────────────────────────────────
-     TOP-UP CHIP
-     ──────────────────────────────────────────────────────────────── */
-  function syncTopupOptions() {
-    document.querySelectorAll('.topup-option-btn').forEach(b => {
-      b.classList.toggle('active', parseInt(b.dataset.amount, 10) === state.topupAmt);
-    });
-  }
-
-  /* ────────────────────────────────────────────────────────────────
-     ROLLED NUMBER OVERLAY
+     ROLLED RESULT CARD
      ──────────────────────────────────────────────────────────────── */
   function showRolledOverlay(value) {
     const isOdd = value % 2 !== 0;
@@ -1254,6 +1343,25 @@
   }
 
   /* ────────────────────────────────────────────────────────────────
+     BET CHIP
+     ──────────────────────────────────────────────────────────────── */
+  function updateBetChip() {
+    dom.betChipValue.textContent = formatMoney(state.bet);
+  }
+
+  function syncBetOptions() {
+    document.querySelectorAll('.bet-option-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.amount, 10) === state.bet);
+    });
+  }
+
+  function syncTopupOptions() {
+    document.querySelectorAll('.topup-option-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.amount, 10) === state.topupAmt);
+    });
+  }
+
+  /* ────────────────────────────────────────────────────────────────
      COUNTDOWN TIMER
      ──────────────────────────────────────────────────────────────── */
   function startTimer() {
@@ -1264,7 +1372,7 @@
     state.timerID = setInterval(() => {
       state.timerSecs -= 1;
 
-      // Pulse last 3 seconds
+      // Pulse the last 3 seconds for urgency
       if (state.timerSecs <= 3 && state.timerSecs > 0) {
         dom.timerDisplay.classList.add('pulse');
         setTimeout(() => dom.timerDisplay.classList.remove('pulse'), 260);
@@ -1286,42 +1394,48 @@
   }
 
   /* ────────────────────────────────────────────────────────────────
-     DICE ROLL
+     DETERMINE ROLL OUTCOME
+     Reads the admin rig queue first; falls back to random.
      ──────────────────────────────────────────────────────────────── */
   function determineOutcome() {
     const directive = state.rigQueue.shift();
     state.rigQueue.push('random');  // keep queue length at 5
 
-    if (directive === 'odd')  return [1,3,5][randInt(0,2)];
-    if (directive === 'even') return [2,4,6][randInt(0,2)];
+    if (directive === 'odd')  return [1, 3, 5][randInt(0, 2)];
+    if (directive === 'even') return [2, 4, 6][randInt(0, 2)];
     return randInt(1, 6);
   }
 
-  function getFaceTransform(face) {
-    const [rx, ry] = FACE_ROTATION[face];
-    return `rotateX(${rx}deg) rotateY(${ry}deg)`;
-  }
-
+  /* ────────────────────────────────────────────────────────────────
+     TRIGGER ROLL
+     ─────────────────────────────────────────────────────────────────
+     Flow:
+       1. Decide the result now (so admin rig is consumed immediately)
+       2. Show the rolling GIF
+       3. After GIF_DURATION_MS → hide GIF, show the correct face image
+       4. Show the result card, resolve the round
+     ──────────────────────────────────────────────────────────────── */
   function triggerRoll() {
     state.phase = 'rolling';
     lockBettingUI(true);
     hideRolledOverlay();
 
     dom.statusMsg.className = 'rolling';
-    dom.statusMsg.textContent = 'Naghihilis…';
+    dom.statusMsg.textContent = 'Rolling…';
 
+    // Decide result upfront
     const result = determineOutcome();
-    const finalTransform = getFaceTransform(result);
 
-    dom.diceCube.style.setProperty('--final-rotation', finalTransform);
-    dom.diceCube.classList.add('rolling');
+    // ── Step 1: show the GIF ──
+    dom.diceWrap.classList.add('rolling');
 
+    // ── Step 2: after GIF completes, swap to face image ──
     setTimeout(() => {
-      dom.diceCube.classList.remove('rolling');
-      dom.diceCube.style.transform = finalTransform;
-      showRolledOverlay(result);   // ← show the number on the dice
+      dom.diceWrap.classList.remove('rolling');  // hides GIF, shows face div
+      showDiceFace(result);                      // set the correct spritesheet slice
+      showRolledOverlay(result);                 // show large result number below
       resolveRound(result);
-    }, ROLL_ANIMATION_MS);
+    }, GIF_DURATION_MS);
   }
 
   /* ────────────────────────────────────────────────────────────────
@@ -1342,33 +1456,39 @@
         spawnFloatText(state.bet, true);
         updateBalanceDisplay('win');
         dom.statusMsg.className = 'win';
-        dom.statusMsg.textContent = `🎉 Lumabas ${diceValue} — Nanalo ka ng ${formatMoney(state.bet)}!`;
+        dom.statusMsg.textContent = `🎉 Rolled ${diceValue} — You won ${formatMoney(state.bet)}!`;
+        showResultPopup('win', diceValue, state.bet);
       } else {
         state.balance = Math.max(0, state.balance - state.bet);
         spawnFloatText(state.bet, false);
         updateBalanceDisplay('lose');
         dom.statusMsg.className = 'lose';
-        dom.statusMsg.textContent = `💀 Lumabas ${diceValue} — Natalo ka ng ${formatMoney(state.bet)}`;
+        dom.statusMsg.textContent = `💀 Rolled ${diceValue} — You lost ${formatMoney(state.bet)}`;
+        showResultPopup('lose', diceValue, state.bet);
       }
     } else {
       dom.statusMsg.className = '';
-      dom.statusMsg.textContent = `Lumabas ${diceValue} (${isOdd ? 'Odd' : 'Even'}) — Walang taya`;
+      dom.statusMsg.textContent = `Rolled ${diceValue} (${isOdd ? 'Odd' : 'Even'}) — No bet placed`;
       updateBalanceDisplay();
+      showResultPopup('neutral', diceValue, null);
     }
 
     clearBetChoice();
     state.round += 1;
     syncAdminQueueUI();
 
-    // Wait 2.4 s so player can read the result, then start next round
+    // Pause so the player can read the result, then start next round
+    // The popup auto-dismisses at POPUP_DURATION_MS; we start the next
+    // round slightly after so the dismiss and reset don't overlap.
     setTimeout(() => {
+      hideResultPopup();
       state.phase = 'betting';
       lockBettingUI(false);
       hideRolledOverlay();
       dom.statusMsg.className = '';
-      dom.statusMsg.textContent = 'Pumili ng taya mo';
+      dom.statusMsg.textContent = 'Place your bet below';
       startTimer();
-    }, 2400);
+    }, POPUP_DURATION_MS + 400);
   }
 
   /* ────────────────────────────────────────────────────────────────
@@ -1393,7 +1513,7 @@
     if (state.phase !== 'betting') return;
 
     if (state.balance <= 0 || state.balance < state.bet) {
-      showToast('Hindi sapat ang balanse. Mag-top up muna.', 'error');
+      showToast("You don't have enough balance. Please top up.", 'error');
       return;
     }
 
@@ -1405,7 +1525,7 @@
 
     dom.statusMsg.className = '';
     dom.statusMsg.textContent =
-      `Tinaya ${formatMoney(state.bet)} sa ${choice.toUpperCase()} — naghihintay…`;
+      `Bet ${formatMoney(state.bet)} on ${choice.toUpperCase()} — waiting for roll…`;
   }
 
   /* ────────────────────────────────────────────────────────────────
@@ -1427,8 +1547,6 @@
      TOP-UP MODAL
      ──────────────────────────────────────────────────────────────── */
   function openTopupModal() {
-    // Pre-select first option if nothing selected yet
-    if (!state.topupAmt) state.topupAmt = TOPUP_OPTIONS[0];
     syncTopupOptions();
     dom.topupModal.classList.add('open');
   }
@@ -1464,7 +1582,7 @@
     }
 
     closeAdminPanel();
-    showToast('Nai-apply na ang settings.', 'success', 1800);
+    showToast('Settings applied.', 'success', 1800);
   }
 
   function syncAdminQueueUI() {
@@ -1479,16 +1597,14 @@
      EVENT LISTENERS
      ──────────────────────────────────────────────────────────────── */
 
-  // ODD / EVEN
+  // ODD / EVEN buttons
   dom.btnOdd.addEventListener('click',  () => placeBet('odd'));
   dom.btnEven.addEventListener('click', () => placeBet('even'));
 
   // Bet chip → opens bet modal
   dom.betChip.addEventListener('click',   openBetModal);
   dom.betChip.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openBetModal(); });
-
-  // Close bet modal on backdrop click
-  dom.betModal.addEventListener('click', e => { if (e.target === dom.betModal) closeBetModal(); });
+  dom.betModal.addEventListener('click',  e => { if (e.target === dom.betModal) closeBetModal(); });
 
   // Bet amount option buttons
   document.querySelectorAll('.bet-option-btn').forEach(btn => {
@@ -1507,16 +1623,11 @@
     dom.btnMaxBet.classList.add('active');
   });
 
-  // Confirm bet selection
-  dom.betConfirmBtn.addEventListener('click', () => {
-    updateBetChip();
-    closeBetModal();
-  });
+  // Confirm bet
+  dom.betConfirmBtn.addEventListener('click', () => { updateBetChip(); closeBetModal(); });
 
   // Top-up button → opens top-up modal
   dom.btnTopup.addEventListener('click', openTopupModal);
-
-  // Close top-up modal on backdrop
   dom.topupModal.addEventListener('click', e => { if (e.target === dom.topupModal) closeTopupModal(); });
 
   // Top-up option buttons
@@ -1534,22 +1645,24 @@
     const amt = state.topupAmt || TOPUP_OPTIONS[1];
     state.balance += amt;
     updateBalanceDisplay('win');
-    showToast(`${formatMoney(amt)} na idinagdag sa iyong balanse!`, 'success', 2400);
+    showToast(`${formatMoney(amt)} added to your balance!`, 'success', 2400);
     closeTopupModal();
   });
 
-  // Admin trigger (invisible corner tap)
+  // Admin panel
   dom.adminTrigger.addEventListener('click', openAdminPanel);
   dom.adminCloseBtn.addEventListener('click', closeAdminPanel);
   dom.adminModal.addEventListener('click', e => { if (e.target === dom.adminModal) closeAdminPanel(); });
   dom.adminApplyBtn.addEventListener('click', applyAdminSettings);
 
+  // Result popup — tap anywhere to dismiss early
+  dom.resultPopup.addEventListener('click', hideResultPopup);
+
   /* ────────────────────────────────────────────────────────────────
      INIT
      ──────────────────────────────────────────────────────────────── */
   function init() {
-    // Set default top-up selection
-    state.topupAmt = TOPUP_OPTIONS[1]; // ₱500 default
+    showDiceFace(1);            // show face 1 by default on load
     updateBalanceDisplay();
     updateBetChip();
     renderHistory();
