@@ -322,9 +322,14 @@
       }
 
       #rolled-overlay {
+        display: none;
         min-width: 110px;
         padding: 8px 22px 10px;
         margin-bottom: 10px;
+      }
+
+      #rolled-overlay.show {
+        display: flex;
       }
 
       #rolled-number {
@@ -1046,17 +1051,30 @@
     ::-webkit-scrollbar-thumb { background: rgba(240,192,64,0.28); border-radius: 4px; }
 
     @media (max-width: 560px), (max-height: 800px) {
+      #app { padding: 16px 14px 108px !important; }
       #results-strip { display: none !important; }
-      #bet-buttons { gap: 10px !important; margin-bottom: 14px !important; }
-      #top-bar { padding: 6px 0 4px !important; }
-      #timer-section { gap: 4px !important; margin-bottom: 10px !important; }
-      #status-msg { font-size: 0.66rem !important; margin-bottom: 10px !important; }
+      #bet-row { margin-top: auto !important; margin-bottom: 10px !important; }
+      #bet-buttons { gap: 10px !important; margin-bottom: 16px !important; }
+      #top-bar { padding: 8px 0 8px !important; }
+      #timer-section { gap: 6px !important; margin-bottom: 14px !important; }
+      #status-msg { font-size: 0.66rem !important; margin-bottom: 14px !important; }
       #dice-wrap {
         --dice-size: clamp(132px, 36vw, 160px) !important;
-        margin-bottom: 10px !important;
+        margin: 34px auto 14px !important;
       }
-      #rolled-overlay { margin-bottom: 10px !important; }
-      #bet-row { margin-bottom: 10px !important; }
+      #rolled-overlay {
+        display: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+      }
+      #rolled-overlay.show {
+        display: flex !important;
+        margin-bottom: 10px !important;
+        padding: 8px 22px 10px !important;
+        min-width: 110px !important;
+      }
       #bet-slip { margin-bottom: 12px !important; }
       #bottom-bar { padding: 10px 14px 12px !important; }
     }
